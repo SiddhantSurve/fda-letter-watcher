@@ -33,7 +33,9 @@ import {
   Trash2,
   LogOut,
   MessageSquare,
+  MessageCircle,
 } from "lucide-react";
+import { LetterChatDialog } from "@/components/letter-chat-dialog";
 
 const PAGE_SIZE = 25;
 
@@ -113,7 +115,7 @@ function Dashboard() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">FDA Warning Letter Tracker</h1>
             <p className="text-xs text-muted-foreground mt-1">
-              {statsQ.data?.total.toLocaleString() ?? "—"} letters · {statsQ.data?.archived.toLocaleString() ?? "—"} archived with summaries
+              {statsQ.data?.total.toLocaleString() ?? "—"} letters in the archive
             </p>
           </div>
           <div className="flex gap-2">
@@ -221,6 +223,7 @@ type Letter = {
 };
 
 function LetterCard({ letter: l }: { letter: Letter }) {
+  const [chatOpen, setChatOpen] = useState(false);
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -233,26 +236,37 @@ function LetterCard({ letter: l }: { letter: Letter }) {
           <h3 className="mt-1 font-semibold">{l.company_name}</h3>
           <p className="text-sm text-muted-foreground mt-0.5">{l.subject}</p>
           <p className="text-xs text-muted-foreground mt-1">{l.issuing_office}</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          {l.excerpt && (
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground line-clamp-3">
+              {l.excerpt}
+            </p>
+          )}
+          <div className="mt-3 flex flex-wrap gap-1.5">
             {l.response_url && <Badge variant="secondary">Response letter</Badge>}
             {l.closeout_url && <Badge variant="secondary">Close-out letter</Badge>}
-            {!l.summary && <Badge variant="outline">Summary pending</Badge>}
           </div>
-          {l.summary ? (
-            <p className="mt-3 text-sm leading-relaxed">{l.summary}</p>
-          ) : l.excerpt ? (
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground italic">{l.excerpt}</p>
-          ) : null}
         </div>
-        <a
-          href={l.letter_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0 inline-flex items-center text-xs text-muted-foreground hover:text-foreground"
-        >
-          <ExternalLink className="mr-1 h-3 w-3" /> FDA.gov
-        </a>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <Button size="sm" variant="outline" onClick={() => setChatOpen(true)}>
+            <MessageCircle className="mr-1.5 h-3.5 w-3.5" /> Ask me
+          </Button>
+          <a
+            href={l.letter_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground"
+          >
+            <ExternalLink className="mr-1 h-3 w-3" /> FDA.gov
+          </a>
+        </div>
       </div>
+      <LetterChatDialog
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        letterId={l.id}
+        company={l.company_name}
+        subject={l.subject}
+      />
     </Card>
   );
 }
