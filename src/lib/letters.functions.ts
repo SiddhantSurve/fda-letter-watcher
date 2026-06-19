@@ -91,7 +91,7 @@ export const refreshCatalog = createServerFn({ method: "POST" }).handler(async (
     }));
   for (let i = 0; i < toInsert.length; i += 500) {
     const chunk = toInsert.slice(i, i + 500);
-    const { error } = await supabaseAdmin.from("warning_letters").insert(chunk as never);
+    const { error } = await supabaseAdmin.from("warning_letters").upsert(chunk as never, { onConflict: "letter_url", ignoreDuplicates: true });
     if (error) throw error;
   }
   // Patch newly-added response/closeout URLs onto existing rows
