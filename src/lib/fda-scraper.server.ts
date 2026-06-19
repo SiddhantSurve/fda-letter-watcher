@@ -1,10 +1,7 @@
-import * as cheerio from "cheerio";
-
 const FDA_BASE = "https://www.fda.gov";
-const LIST_URL =
-  "https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/compliance-actions-and-activities/warning-letters";
+const AJAX = "https://www.fda.gov/datatables/views/ajax";
 
-export interface ScrapedRow {
+export interface ListingRow {
   letter_url: string;
   posted_date: string;
   issue_date: string;
@@ -16,44 +13,60 @@ export interface ScrapedRow {
   closeout_url: string | null;
 }
 
-function absolutize(href: string | undefined): string | null {
+function abs(href: string | null | undefined): string | null {
   if (!href) return null;
   if (href.startsWith("http")) return href;
   if (href.startsWith("/")) return FDA_BASE + href;
   return null;
 }
 
-export async function fetchListing(): Promise<ScrapedRow[]> {
-  const res = await fetch(LIST_URL, {
-    headers: { "User-Agent": "Mozilla/5.0 (Lovable FDA Letter Tracker)" },
+function stripTags(html: string): string {
+  return html.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function extractHref(html: string): string | null {
+  const m = html.match(/href="([^"]+)"/);
+  return m ? m[1].replace(/&amp;/g, "&") : null;
+}
+
+async function fetchPage(start: number, length: number): Promise<{ total: number; data: string[][] }> {
+  const url = `${AJAX}?_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_name=warning_letter_solr_index&view_display_id=warning_letter_solr_block&view_path=/inspections-compliance-enforcement-and-criminal-investigations/compliance-actions-and-activities/warning-letters&view_dom_id=x&length=${length}&start=${start}&draw=1`;
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Lovable FDA Letter Tracker)",
+      Accept: "application/json, text/javascript, */*; q=0.01",
+      "X-Requested-With": "XMLHttpRequest",
+    },
   });
   if (!res.ok) throw new Error(`FDA list fetch failed: ${res.status}`);
-  const html = await res.text();
-  const $ = cheerio.load(html);
-  const rows: ScrapedRow[] = [];
+  const json = await res.json() as { recordsTotal: number; data: string[][] };
+  return { total: json.recordsTotal, data: json.data };
+}
 
-  $("table tbody tr").each((_, tr) => {
-    const tds = $(tr).find("td");
-    if (tds.length < 7) return;
-    const companyCell = $(tds[2]);
-    const link = companyCell.find("a").attr("href");
-    const letter_url = absolutize(link);
-    if (!letter_url) return;
-    const response_url = absolutize($(tds[5]).find("a").attr("href"));
-    const closeout_url = absolutize($(tds[6]).find("a").attr("href"));
+export async function fetchAllListings(): Promise<ListingRow[]> {
+  const pageSize = 500;
+  const first = await fetchPage(0, pageSize);
+  const rows: ListingRow[] = [];
+  const all: string[][] = [...first.data];
+  for (let start = pageSize; start < first.total; start += pageSize) {
+    const p = await fetchPage(start, pageSize);
+    all.push(...p.data);
+  }
+  for (const r of all) {
+    const letter_url = abs(extractHref(r[2]));
+    if (!letter_url) continue;
     rows.push({
       letter_url,
-      posted_date: $(tds[0]).text().trim(),
-      issue_date: $(tds[1]).text().trim(),
-      company_name: companyCell.text().trim(),
-      issuing_office: $(tds[3]).text().trim(),
-      subject: $(tds[4]).text().trim(),
-      excerpt: tds.length > 7 ? $(tds[7]).text().trim() : "",
-      response_url,
-      closeout_url,
+      posted_date: stripTags(r[0]),
+      issue_date: stripTags(r[1]),
+      company_name: stripTags(r[2]),
+      issuing_office: stripTags(r[3]),
+      subject: stripTags(r[4]),
+      response_url: abs(extractHref(r[5])),
+      closeout_url: abs(extractHref(r[6])),
+      excerpt: stripTags(r[7] ?? ""),
     });
-  });
-
+  }
   return rows;
 }
 
