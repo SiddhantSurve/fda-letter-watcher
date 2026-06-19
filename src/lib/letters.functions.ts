@@ -117,6 +117,51 @@ export const refreshCatalog = createServerFn({ method: "POST" }).handler(async (
   return { total_listed: rows.length, new_rows: toInsert.length, url_updates: urlUpdates };
 });
 
+export const refreshUntitledCatalog = createServerFn({ method: "POST" }).handler(async () => {
+  const { fetchUntitledListings } = await import("@/lib/untitled-scraper.server");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const rows = await fetchUntitledListings();
+  const { data: existing } = await supabaseAdmin
+    .from("warning_letters")
+    .select("letter_url, response_url, closeout_url")
+    .eq("letter_kind", "untitled");
+  const existingMap = new Map((existing ?? []).map((r) => [r.letter_url, r] as const));
+  const toInsert = rows
+    .filter((r) => !existingMap.has(r.letter_url))
+    .map((r) => ({
+      letter_url: r.letter_url,
+      posted_date: r.posted_date,
+      issue_date: r.issue_date,
+      company_name: r.company_name,
+      issuing_office: r.issuing_office,
+      subject: r.subject,
+      excerpt: r.excerpt,
+      response_url: r.response_url,
+      closeout_url: r.closeout_url,
+      letter_kind: "untitled",
+    }));
+  for (let i = 0; i < toInsert.length; i += 500) {
+    const chunk = toInsert.slice(i, i + 500);
+    const { error } = await supabaseAdmin
+      .from("warning_letters")
+      .upsert(chunk as never, { onConflict: "letter_url", ignoreDuplicates: true });
+    if (error) throw error;
+  }
+  let urlUpdates = 0;
+  for (const r of rows) {
+    const ex = existingMap.get(r.letter_url);
+    if (!ex) continue;
+    if (ex.response_url !== r.response_url || ex.closeout_url !== r.closeout_url) {
+      await supabaseAdmin
+        .from("warning_letters")
+        .update({ response_url: r.response_url, closeout_url: r.closeout_url })
+        .eq("letter_url", r.letter_url);
+      urlUpdates++;
+    }
+  }
+  return { total_listed: rows.length, new_rows: toInsert.length, url_updates: urlUpdates };
+});
+
 export const processBatch = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ limit: z.number().int().min(1).max(50).optional() }).parse(input ?? {}))
   .handler(async ({ data }) => {
