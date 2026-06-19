@@ -414,7 +414,7 @@ function ChatPanel({
       <div className="border-b px-5 py-3">
         <h2 className="text-base font-semibold">Ask the archive</h2>
         <p className="text-xs text-muted-foreground">
-          Ask anything about FDA warning letters — answers cite specific letters from the archive.
+          Ask anything about FDA {kind === "untitled" ? "untitled" : "warning"} letters — answers cite specific letters from the archive.
         </p>
       </div>
       <div ref={scrollRef} className="max-h-[420px] min-h-[180px] overflow-y-auto px-5 py-4 space-y-4">
@@ -422,9 +422,19 @@ function ChatPanel({
           <div className="text-sm text-muted-foreground space-y-2">
             <p>Try:</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>What violations are most common in cosmetics warning letters?</li>
-              <li>Show me recent letters about data integrity in pharmaceutical manufacturing.</li>
-              <li>Which companies received warnings about unapproved drug claims this year?</li>
+              {kind === "untitled" ? (
+                <>
+                  <li>What promotional claims most often trigger OPDP untitled letters?</li>
+                  <li>Show me recent untitled letters about oncology products.</li>
+                  <li>Which companies have received multiple untitled letters?</li>
+                </>
+              ) : (
+                <>
+                  <li>What violations are most common in cosmetics warning letters?</li>
+                  <li>Show me recent letters about data integrity in pharmaceutical manufacturing.</li>
+                  <li>Which companies received warnings about unapproved drug claims this year?</li>
+                </>
+              )}
             </ul>
           </div>
         ) : (
