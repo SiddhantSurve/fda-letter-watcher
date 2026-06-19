@@ -16,15 +16,18 @@ export const listLetters = createServerFn({ method: "GET" })
       search: z.string().optional(),
       limit: z.number().int().min(1).max(200).optional(),
       offset: z.number().int().min(0).optional(),
+      kind: z.enum(["warning", "untitled"]).optional(),
     }).parse(input ?? {}),
   )
   .handler(async ({ data }) => {
     const supabase = publicClient();
     const limit = data.limit ?? 50;
     const offset = data.offset ?? 0;
+    const kind = data.kind ?? "warning";
     let q = supabase
       .from("warning_letters")
       .select("*", { count: "exact" })
+      .eq("letter_kind", kind)
       .order("posted_date", { ascending: false })
       .range(offset, offset + limit - 1);
     if (data.search) {
@@ -36,26 +39,30 @@ export const listLetters = createServerFn({ method: "GET" })
     return { letters: rows ?? [], total: count ?? 0 };
   });
 
-export const getStats = createServerFn({ method: "GET" }).handler(async () => {
-  const supabase = publicClient();
-  const [total, withLetter, withResponse, withCloseout, pending] = await Promise.all([
-    supabase.from("warning_letters").select("id", { count: "exact", head: true }),
-    supabase.from("warning_letters").select("id", { count: "exact", head: true }).not("letter_storage_path", "is", null),
-    supabase.from("warning_letters").select("id", { count: "exact", head: true }).not("response_storage_path", "is", null),
-    supabase.from("warning_letters").select("id", { count: "exact", head: true }).not("closeout_storage_path", "is", null),
-    supabase
-      .from("warning_letters")
-      .select("id", { count: "exact", head: true })
-      .or("letter_storage_path.is.null,and(response_url.not.is.null,response_storage_path.is.null),and(closeout_url.not.is.null,closeout_storage_path.is.null)"),
-  ]);
-  return {
-    total: total.count ?? 0,
-    archived: withLetter.count ?? 0,
-    withResponse: withResponse.count ?? 0,
-    withCloseout: withCloseout.count ?? 0,
-    pending: pending.count ?? 0,
-  };
-});
+export const getStats = createServerFn({ method: "GET" })
+  .inputValidator((input) =>
+    z.object({ kind: z.enum(["warning", "untitled"]).optional() }).parse(input ?? {}),
+  )
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const kind = data.kind ?? "warning";
+    const base = () =>
+      supabase.from("warning_letters").select("id", { count: "exact", head: true }).eq("letter_kind", kind);
+    const [total, withLetter, withResponse, withCloseout, pending] = await Promise.all([
+      base(),
+      base().not("letter_storage_path", "is", null),
+      base().not("response_storage_path", "is", null),
+      base().not("closeout_storage_path", "is", null),
+      base().or("letter_storage_path.is.null,and(response_url.not.is.null,response_storage_path.is.null),and(closeout_url.not.is.null,closeout_storage_path.is.null)"),
+    ]);
+    return {
+      total: total.count ?? 0,
+      archived: withLetter.count ?? 0,
+      withResponse: withResponse.count ?? 0,
+      withCloseout: withCloseout.count ?? 0,
+      pending: pending.count ?? 0,
+    };
+  });
 
 export const getDownloadUrl = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ path: z.string().min(1) }).parse(input))
