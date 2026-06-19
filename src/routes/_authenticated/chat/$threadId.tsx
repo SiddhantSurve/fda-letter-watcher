@@ -289,11 +289,9 @@ function ChatPanel({
         api: "/api/chat",
         prepareSendMessagesRequest: async ({ messages }) => {
           const { data } = await supabase.auth.getSession();
-          const token = data.session?.access_token;
-          return {
-            body: { messages, threadId },
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          };
+          const headers: Record<string, string> = {};
+          if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+          return { body: { messages, threadId }, headers };
         },
       }),
     [threadId],

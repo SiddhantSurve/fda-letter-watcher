@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthenticatedChatThreadIdRouteImport } from './routes/_authenticated/chat/$threadId'
 import { Route as ApiPublicHooksScrapeFdaRouteImport } from './routes/api/public/hooks/scrape-fda'
 import { Route as ApiPublicHooksProcessPendingRouteImport } from './routes/api/public/hooks/process-pending'
 
@@ -35,6 +36,12 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedChatThreadIdRoute =
+  AuthenticatedChatThreadIdRouteImport.update({
+    id: '/chat/$threadId',
+    path: '/chat/$threadId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicHooksScrapeFdaRoute = ApiPublicHooksScrapeFdaRouteImport.update({
   id: '/api/public/hooks/scrape-fda',
   path: '/api/public/hooks/scrape-fda',
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
+  '/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
 }
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
   '/': typeof AuthenticatedIndexRoute
+  '/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
 }
@@ -67,6 +76,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
 }
@@ -76,6 +86,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/api/chat'
+    | '/chat/$threadId'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
   fileRoutesByTo: FileRoutesByTo
@@ -83,6 +94,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/chat'
     | '/'
+    | '/chat/$threadId'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
   id:
@@ -91,6 +103,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/chat'
     | '/_authenticated/'
+    | '/_authenticated/chat/$threadId'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
   fileRoutesById: FileRoutesById
@@ -133,6 +146,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/chat/$threadId': {
+      id: '/_authenticated/chat/$threadId'
+      path: '/chat/$threadId'
+      fullPath: '/chat/$threadId'
+      preLoaderRoute: typeof AuthenticatedChatThreadIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/hooks/scrape-fda': {
       id: '/api/public/hooks/scrape-fda'
       path: '/api/public/hooks/scrape-fda'
@@ -152,10 +172,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedChatThreadIdRoute: typeof AuthenticatedChatThreadIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedChatThreadIdRoute: AuthenticatedChatThreadIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
