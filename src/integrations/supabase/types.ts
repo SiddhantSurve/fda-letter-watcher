@@ -14,7 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      warning_letters: {
+        Row: {
+          closeout_storage_path: string | null
+          closeout_url: string | null
+          company_name: string
+          created_at: string
+          excerpt: string | null
+          id: string
+          issue_date: string | null
+          issuing_office: string | null
+          letter_storage_path: string | null
+          letter_url: string
+          posted_date: string | null
+          response_storage_path: string | null
+          response_url: string | null
+          subject: string | null
+        }
+        Insert: {
+          closeout_storage_path?: string | null
+          closeout_url?: string | null
+          company_name: string
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_office?: string | null
+          letter_storage_path?: string | null
+          letter_url: string
+          posted_date?: string | null
+          response_storage_path?: string | null
+          response_url?: string | null
+          subject?: string | null
+        }
+        Update: {
+          closeout_storage_path?: string | null
+          closeout_url?: string | null
+          company_name?: string
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_office?: string | null
+          letter_storage_path?: string | null
+          letter_url?: string
+          posted_date?: string | null
+          response_storage_path?: string | null
+          response_url?: string | null
+          subject?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
