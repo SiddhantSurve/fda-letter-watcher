@@ -90,9 +90,9 @@ export async function fetchUntitledListings(): Promise<UntitledRow[]> {
       company_name: company,
       subject: product,
       issuing_office: "Office of Prescription Drug Promotion",
-      excerpt: promoUrl ? `Promotional material: ${promoUrl}` : "",
-      response_url: responseUrl,
-      closeout_url: closeoutUrl,
+      excerpt: promoUrl ? `Promotional material: ${absolutize(promoUrl)}` : "",
+      response_url: responseUrl ? absolutize(responseUrl) : null,
+      closeout_url: closeoutUrl ? absolutize(closeoutUrl) : null,
     });
   }
   return rows;
