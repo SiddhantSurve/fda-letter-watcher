@@ -9,12 +9,14 @@ import {
   listLetters,
   getStats,
   refreshCatalog,
+  refreshUntitledCatalog,
 } from "@/lib/letters.functions";
 import {
   listThreads,
   createThread,
   deleteThread,
   getThreadMessages,
+  getThread,
 } from "@/lib/chat.functions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -45,8 +47,8 @@ const PAGE_SIZE = 25;
 export const Route = createFileRoute("/_authenticated/chat/$threadId")({
   head: () => ({
     meta: [
-      { title: "FDA Warning Letter Tracker" },
-      { name: "description", content: "Chat with the FDA warning letter archive." },
+      { title: "FDA Letter Tracker" },
+      { name: "description", content: "Chat with FDA warning and untitled letters." },
     ],
   }),
   component: Dashboard,
@@ -60,27 +62,45 @@ function Dashboard() {
   const list = useServerFn(listLetters);
   const stats = useServerFn(getStats);
   const refresh = useServerFn(refreshCatalog);
+  const refreshUntitled = useServerFn(refreshUntitledCatalog);
   const listThreadsFn = useServerFn(listThreads);
   const createThreadFn = useServerFn(createThread);
   const deleteThreadFn = useServerFn(deleteThread);
   const getMsgs = useServerFn(getThreadMessages);
+  const getThreadFn = useServerFn(getThread);
 
+  const threadQ = useQuery({
+    queryKey: ["thread", threadId],
+    queryFn: () => getThreadFn({ data: { id: threadId } }),
+  });
+  const kind = threadQ.data?.kind ?? "warning";
+  const isUntitled = kind === "untitled";
+  const kindLabel = isUntitled ? "Untitled Letter" : "Warning Letter";
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
 
   const lettersQ = useQuery({
-    queryKey: ["letters", q, page],
-    queryFn: () => list({ data: { search: q, limit: PAGE_SIZE, offset: page * PAGE_SIZE } }),
+    queryKey: ["letters", kind, q, page],
+    queryFn: () => list({ data: { search: q, limit: PAGE_SIZE, offset: page * PAGE_SIZE, kind } }),
+    enabled: !!threadQ.data,
   });
-  const statsQ = useQuery({ queryKey: ["stats"], queryFn: () => stats() });
-  const threadsQ = useQuery({ queryKey: ["threads"], queryFn: () => listThreadsFn() });
+  const statsQ = useQuery({
+    queryKey: ["stats", kind],
+    queryFn: () => stats({ data: { kind } }),
+    enabled: !!threadQ.data,
+  });
+  const threadsQ = useQuery({
+    queryKey: ["threads", kind],
+    queryFn: () => listThreadsFn({ data: { kind } }),
+    enabled: !!threadQ.data,
+  });
   const initialMsgsQ = useQuery({
     queryKey: ["msgs", threadId],
     queryFn: () => getMsgs({ data: { threadId } }),
   });
 
   const refreshMut = useMutation({
-    mutationFn: () => refresh(),
+    mutationFn: () => (isUntitled ? refreshUntitled() : refresh()),
     onSuccess: (r) => {
       toast.success(`Catalog refreshed — ${r.new_rows} new letter(s)`);
       qc.invalidateQueries({ queryKey: ["letters"] });
@@ -95,7 +115,7 @@ function Dashboard() {
   };
 
   const newThread = async () => {
-    const { id } = await createThreadFn();
+    const { id } = await createThreadFn({ data: { kind } });
     qc.invalidateQueries({ queryKey: ["threads"] });
     navigate({ to: "/chat/$threadId", params: { threadId: id } });
   };
@@ -119,18 +139,21 @@ function Dashboard() {
       <header className="border-b border-t-4 border-t-primary">
         <div className="mx-auto max-w-7xl px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">FDA Warning Letter Tracker</h1>
+            <h1 className="text-2xl font-bold tracking-tight">FDA {kindLabel} Tracker</h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
               </span>
               <p className="text-xs text-muted-foreground">
-                Actively reading through {statsQ.data?.total.toLocaleString() ?? "—"} letters...
+                Actively reading through {statsQ.data?.total.toLocaleString() ?? "—"} {isUntitled ? "untitled" : "warning"} letters...
               </p>
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/" })}>
+              Switch archive
+            </Button>
             <Button variant="outline" size="sm" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
               <RefreshCw className={`mr-2 h-3.5 w-3.5 ${refreshMut.isPending ? "animate-spin" : ""}`} />
               Refresh catalog
@@ -147,7 +170,7 @@ function Dashboard() {
         <div className="bg-card border rounded-lg p-5">
           <h2 className="text-sm font-semibold mb-1">About this tracker</h2>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            This workspace monitors FDA warning letters in real-time. Use the chat interface to query trends, common violations, and specific compliance themes across the entire database, or use the <strong>"Ask me"</strong> feature next to individual letters to chat directly with that specific document.
+            This workspace monitors FDA {isUntitled ? "untitled" : "warning"} letters in real-time. Use the chat interface to query trends, common violations, and specific compliance themes across the entire database, or use the <strong>"Ask me"</strong> feature next to individual letters to chat directly with that specific document.
           </p>
         </div>
 
@@ -185,6 +208,7 @@ function Dashboard() {
           <ChatPanel
             key={threadId}
             threadId={threadId}
+            kind={kind}
             initialMessages={initialMsgsQ.data as UIMessage[] | undefined}
             onSent={() => qc.invalidateQueries({ queryKey: ["threads"] })}
           />
@@ -333,10 +357,12 @@ function Pager({ page, setPage, total }: { page: number; setPage: (n: number) =>
 
 function ChatPanel({
   threadId,
+  kind,
   initialMessages,
   onSent,
 }: {
   threadId: string;
+  kind: "warning" | "untitled";
   initialMessages: UIMessage[] | undefined;
   onSent: () => void;
 }) {
@@ -388,7 +414,7 @@ function ChatPanel({
       <div className="border-b px-5 py-3">
         <h2 className="text-base font-semibold">Ask the archive</h2>
         <p className="text-xs text-muted-foreground">
-          Ask anything about FDA warning letters — answers cite specific letters from the archive.
+          Ask anything about FDA {kind === "untitled" ? "untitled" : "warning"} letters — answers cite specific letters from the archive.
         </p>
       </div>
       <div ref={scrollRef} className="max-h-[420px] min-h-[180px] overflow-y-auto px-5 py-4 space-y-4">
@@ -396,9 +422,19 @@ function ChatPanel({
           <div className="text-sm text-muted-foreground space-y-2">
             <p>Try:</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>What violations are most common in cosmetics warning letters?</li>
-              <li>Show me recent letters about data integrity in pharmaceutical manufacturing.</li>
-              <li>Which companies received warnings about unapproved drug claims this year?</li>
+              {kind === "untitled" ? (
+                <>
+                  <li>What promotional claims most often trigger OPDP untitled letters?</li>
+                  <li>Show me recent untitled letters about oncology products.</li>
+                  <li>Which companies have received multiple untitled letters?</li>
+                </>
+              ) : (
+                <>
+                  <li>What violations are most common in cosmetics warning letters?</li>
+                  <li>Show me recent letters about data integrity in pharmaceutical manufacturing.</li>
+                  <li>Which companies received warnings about unapproved drug claims this year?</li>
+                </>
+              )}
             </ul>
           </div>
         ) : (
@@ -424,7 +460,7 @@ function ChatPanel({
         <Textarea
           ref={taRef}
           rows={1}
-          placeholder="Ask a question about FDA warning letters…"
+          placeholder={`Ask a question about FDA ${kind === "untitled" ? "untitled" : "warning"} letters…`}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {

@@ -43,6 +43,18 @@ export const Route = createFileRoute("/api/chat")({
 
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+          // Determine the letter_kind scope of this conversation
+          let kind: "warning" | "untitled" = "warning";
+          if (body.threadId) {
+            const { data: thread } = await supabaseAdmin
+              .from("chat_threads")
+              .select("letter_kind")
+              .eq("id", body.threadId)
+              .single();
+            if (thread?.letter_kind === "untitled") kind = "untitled";
+          }
+          const kindLabelPlural = kind === "untitled" ? "FDA untitled letters" : "FDA warning letters";
+
           // ── Build context ────────────────────────────────────────────────
           let system: string;
 
@@ -51,29 +63,33 @@ export const Route = createFileRoute("/api/chat")({
             const { data: letter } = await supabaseAdmin
               .from("warning_letters")
               .select(
-                "company_name, subject, posted_date, issue_date, issuing_office, letter_url, letter_storage_path",
+                "company_name, subject, posted_date, issue_date, issuing_office, letter_url, letter_storage_path, letter_kind",
               )
               .eq("id", body.letterId)
               .single();
 
             if (!letter) return new Response("Letter not found", { status: 404 });
 
-            const text = await getLetterText({
-              letterUrl: letter.letter_url,
-              storagePath: letter.letter_storage_path,
-            });
+            const isUntitled = letter.letter_kind === "untitled";
+            const text = isUntitled
+              ? ""
+              : await getLetterText({
+                  letterUrl: letter.letter_url,
+                  storagePath: letter.letter_storage_path,
+                });
 
-            system = `You are an expert assistant answering questions about a single FDA warning letter. Use ONLY the letter content below. If the answer isn't in it, say so plainly.
+            system = `You are an expert assistant answering questions about a single ${isUntitled ? "FDA untitled letter" : "FDA warning letter"}. Use ONLY the information below. If the answer isn't in it, say so plainly.
 
 Letter metadata:
 - Company: ${letter.company_name}
-- Subject: ${letter.subject ?? "—"}
+- Product / Subject: ${letter.subject ?? "—"}
 - Posted: ${letter.posted_date ?? "—"}  Issued: ${letter.issue_date ?? "—"}
 - Issuing office: ${letter.issuing_office ?? "—"}
-- Source: ${letter.letter_url}
+- Source PDF: ${letter.letter_url}
 
-Letter content:
-${text || "(unable to load letter content)"}`;
+${isUntitled
+  ? "This letter's full content is a PDF that has not been parsed into text. Use the metadata above and your general knowledge of FDA promotional-communications enforcement to discuss the product/issue at a high level, and always point the user to the source PDF for specifics."
+  : `Letter content:\n${text || "(unable to load letter content)"}`}`;
           } else {
             // Archive-wide chat: keyword search → fetch full text of top matches.
             const tokens = Array.from(
@@ -106,31 +122,35 @@ ${text || "(unable to load letter content)"}`;
               const { data } = await supabaseAdmin
                 .from("warning_letters")
                 .select("id, company_name, subject, posted_date, issuing_office, letter_url, letter_storage_path")
+                .eq("letter_kind", kind)
                 .or(orExpr)
                 .limit(4);
               matches = data ?? [];
             }
 
-            // Fetch full text for each match in parallel (capped to 4)
             const enriched = await Promise.all(
               matches.map(async (m, i) => {
-                const text = await getLetterText({
-                  letterUrl: m.letter_url,
-                  storagePath: m.letter_storage_path,
-                });
-                return `[${i + 1}] ${m.company_name} — ${m.subject ?? "(no subject)"} (posted ${m.posted_date ?? "?"}, ${m.issuing_office ?? "?"})\nSource: ${m.letter_url}\n---\n${text || "(content unavailable)"}`;
+                const text =
+                  kind === "untitled"
+                    ? ""
+                    : await getLetterText({
+                        letterUrl: m.letter_url,
+                        storagePath: m.letter_storage_path,
+                      });
+                return `[${i + 1}] ${m.company_name} — ${m.subject ?? "(no subject)"} (posted ${m.posted_date ?? "?"}, ${m.issuing_office ?? "?"})\nSource: ${m.letter_url}\n---\n${text || "(content is a PDF — refer to source)"}`;
               }),
             );
 
             const context = enriched.length
               ? enriched.join("\n\n========\n\n")
-              : "(no matching letters found in the archive)";
+              : `(no matching ${kindLabelPlural} found in the archive)`;
 
-            system = `You are an expert assistant answering questions about FDA warning letters. Use ONLY the retrieved letter content below to answer. If the answer isn't in them, say so. Cite letters by [number] and the company name.
+            system = `You are an expert assistant answering questions about ${kindLabelPlural}. Use ONLY the retrieved letter information below to answer. If the answer isn't in them, say so. Cite letters by [number] and the company name.
 
 Retrieved letters:
 ${context}`;
           }
+
 
           const gateway = lovableGateway();
           const result = streamText({
