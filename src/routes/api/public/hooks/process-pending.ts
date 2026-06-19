@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { fetchBinary, slugifyFromUrl } from "@/lib/fda-scraper.server";
+import { summarizeLetter } from "@/lib/summarize.server";
 
 export const Route = createFileRoute("/api/public/hooks/process-pending")({
   server: {
@@ -14,14 +15,13 @@ async function handler({ request }: { request: Request }) {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const url = new URL(request.url);
-    const limit = Math.min(Number(url.searchParams.get("limit") ?? "20"), 50);
+    const limit = Math.min(Number(url.searchParams.get("limit") ?? "10"), 25);
 
-    // Rows that still need a download: either main letter not stored,
-    // or a response/closeout URL exists but no storage path yet.
+    // Rows that still need a download or summary
     const { data: pending, error } = await supabaseAdmin
       .from("warning_letters")
-      .select("id, letter_url, response_url, response_storage_path, closeout_url, closeout_storage_path, letter_storage_path, company_name")
-      .or("letter_storage_path.is.null,and(response_url.not.is.null,response_storage_path.is.null),and(closeout_url.not.is.null,closeout_storage_path.is.null)")
+      .select("id, letter_url, response_url, response_storage_path, closeout_url, closeout_storage_path, letter_storage_path, company_name, subject, excerpt, summary")
+      .or("letter_storage_path.is.null,summary.is.null,and(response_url.not.is.null,response_storage_path.is.null),and(closeout_url.not.is.null,closeout_storage_path.is.null)")
       .limit(limit);
     if (error) throw error;
 
@@ -32,6 +32,7 @@ async function handler({ request }: { request: Request }) {
       try {
         const slug = slugifyFromUrl(row.letter_url);
         const updates: Record<string, string> = {};
+        let letterHtml: string | undefined;
 
         if (!row.letter_storage_path) {
           const letter = await fetchBinary(row.letter_url);
@@ -41,6 +42,26 @@ async function handler({ request }: { request: Request }) {
             .upload(path, letter.body, { contentType: letter.contentType, upsert: true });
           if (up.error) throw up.error;
           updates.letter_storage_path = path;
+          letterHtml = new TextDecoder().decode(letter.body);
+        }
+
+        // Generate AI summary if missing
+        if (!row.summary) {
+          if (!letterHtml && row.letter_storage_path) {
+            try {
+              const { data: dl } = await supabaseAdmin.storage.from("warning-letters").download(row.letter_storage_path);
+              if (dl) letterHtml = await dl.text();
+            } catch { /* ignore */ }
+          }
+          try {
+            const summary = await summarizeLetter({
+              company: row.company_name,
+              subject: row.subject ?? "",
+              letterHtml,
+              excerpt: row.excerpt ?? undefined,
+            });
+            if (summary) updates.summary = summary;
+          } catch (e) { console.error("summary fail", e); }
         }
 
         if (row.response_url && !row.response_storage_path) {
@@ -77,11 +98,10 @@ async function handler({ request }: { request: Request }) {
       }
     }
 
-    // Remaining pending count
     const { count: remaining } = await supabaseAdmin
       .from("warning_letters")
       .select("id", { count: "exact", head: true })
-      .or("letter_storage_path.is.null,and(response_url.not.is.null,response_storage_path.is.null),and(closeout_url.not.is.null,closeout_storage_path.is.null)");
+      .or("letter_storage_path.is.null,summary.is.null,and(response_url.not.is.null,response_storage_path.is.null),and(closeout_url.not.is.null,closeout_storage_path.is.null)");
 
     return Response.json({ ok: true, processed, remaining: remaining ?? 0, failures });
   } catch (e) {
@@ -93,3 +113,4 @@ async function handler({ request }: { request: Request }) {
     });
   }
 }
+
