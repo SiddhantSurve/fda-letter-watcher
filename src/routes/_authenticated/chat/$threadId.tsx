@@ -357,10 +357,12 @@ function Pager({ page, setPage, total }: { page: number; setPage: (n: number) =>
 
 function ChatPanel({
   threadId,
+  kind,
   initialMessages,
   onSent,
 }: {
   threadId: string;
+  kind: "warning" | "untitled";
   initialMessages: UIMessage[] | undefined;
   onSent: () => void;
 }) {
