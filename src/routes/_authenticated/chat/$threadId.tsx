@@ -288,20 +288,49 @@ function LetterCard({ letter: l }: { letter: Letter }) {
           <h3 className="mt-1 font-semibold">{l.company_name}</h3>
           <p className="text-sm text-muted-foreground mt-0.5">{l.subject}</p>
           <p className="text-xs text-muted-foreground mt-1">{l.issuing_office}</p>
-          {l.excerpt && !summaryMut.data && (
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground line-clamp-3">
-              {l.excerpt}
-            </p>
-          )}
-          {summaryMut.data && (
-            <div className="mt-3 rounded-md border border-primary/20 bg-accent/40 p-3 text-sm prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1">
-              <ReactMarkdown>{summaryMut.data.summary}</ReactMarkdown>
-            </div>
-          )}
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {l.response_url && <Badge variant="secondary">Response letter</Badge>}
-            {l.closeout_url && <Badge variant="secondary">Close-out letter</Badge>}
-          </div>
+          {(() => {
+            const promoMatch = l.excerpt?.match(/https?:\/\/\S+/);
+            const promoUrl = promoMatch ? promoMatch[0] : null;
+            const showExcerpt = l.excerpt && !promoUrl && !summaryMut.data;
+            return (
+              <>
+                {showExcerpt && (
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground line-clamp-3">
+                    {l.excerpt}
+                  </p>
+                )}
+                {summaryMut.data && (
+                  <div className="mt-3 rounded-md border border-primary/20 bg-accent/40 p-3 text-sm prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1">
+                    <ReactMarkdown>{summaryMut.data.summary}</ReactMarkdown>
+                  </div>
+                )}
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {promoUrl && (
+                    <a href={promoUrl} target="_blank" rel="noopener noreferrer">
+                      <Badge variant="secondary" className="cursor-pointer hover:bg-accent">
+                        <ExternalLink className="mr-1 h-3 w-3" /> Promotional material
+                      </Badge>
+                    </a>
+                  )}
+                  {l.response_url && (
+                    <a href={l.response_url} target="_blank" rel="noopener noreferrer">
+                      <Badge variant="secondary" className="cursor-pointer hover:bg-accent">
+                        <ExternalLink className="mr-1 h-3 w-3" /> Response letter
+                      </Badge>
+                    </a>
+                  )}
+                  {l.closeout_url && (
+                    <a href={l.closeout_url} target="_blank" rel="noopener noreferrer">
+                      <Badge variant="secondary" className="cursor-pointer hover:bg-accent">
+                        <ExternalLink className="mr-1 h-3 w-3" /> Close-out letter
+                      </Badge>
+                    </a>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
           <Button size="sm" variant="outline" onClick={() => setChatOpen(true)}>
