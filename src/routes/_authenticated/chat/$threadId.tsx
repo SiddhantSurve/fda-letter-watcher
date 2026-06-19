@@ -110,7 +110,10 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Toaster />
-      <header className="border-b">
+      <div className="bg-primary text-primary-foreground text-center text-xs px-4 py-2 font-medium">
+        This is a vibe-coding product built by Sid — not formalized and currently in testing.
+      </div>
+      <header className="border-b border-t-4 border-t-primary">
         <div className="mx-auto max-w-7xl px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">FDA Warning Letter Tracker</h1>
