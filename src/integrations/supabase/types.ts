@@ -53,6 +53,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          letter_kind: string
           title: string
           updated_at: string
           user_id: string
@@ -60,6 +61,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          letter_kind?: string
           title?: string
           updated_at?: string
           user_id: string
@@ -67,6 +69,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          letter_kind?: string
           title?: string
           updated_at?: string
           user_id?: string
@@ -83,6 +86,7 @@ export type Database = {
           id: string
           issue_date: string | null
           issuing_office: string | null
+          letter_kind: string
           letter_storage_path: string | null
           letter_url: string
           posted_date: string | null
@@ -100,6 +104,7 @@ export type Database = {
           id?: string
           issue_date?: string | null
           issuing_office?: string | null
+          letter_kind?: string
           letter_storage_path?: string | null
           letter_url: string
           posted_date?: string | null
@@ -117,6 +122,7 @@ export type Database = {
           id?: string
           issue_date?: string | null
           issuing_office?: string | null
+          letter_kind?: string
           letter_storage_path?: string | null
           letter_url?: string
           posted_date?: string | null
