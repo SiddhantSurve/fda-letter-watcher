@@ -2,19 +2,59 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-export const listLetters = createServerFn({ method: "GET" }).handler(async () => {
-  const supabase = createClient(
+function publicClient() {
+  return createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_PUBLISHABLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
   );
-  const { data, error } = await supabase
-    .from("warning_letters")
-    .select("*")
-    .order("posted_date", { ascending: false })
-    .limit(500);
-  if (error) throw error;
-  return { letters: data ?? [] };
+}
+
+export const listLetters = createServerFn({ method: "GET" })
+  .inputValidator((input) =>
+    z.object({
+      search: z.string().optional(),
+      limit: z.number().int().min(1).max(200).optional(),
+      offset: z.number().int().min(0).optional(),
+    }).parse(input ?? {}),
+  )
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const limit = data.limit ?? 50;
+    const offset = data.offset ?? 0;
+    let q = supabase
+      .from("warning_letters")
+      .select("*", { count: "exact" })
+      .order("posted_date", { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (data.search) {
+      const s = data.search.replace(/[%_]/g, "");
+      q = q.or(`company_name.ilike.%${s}%,subject.ilike.%${s}%,issuing_office.ilike.%${s}%`);
+    }
+    const { data: rows, error, count } = await q;
+    if (error) throw error;
+    return { letters: rows ?? [], total: count ?? 0 };
+  });
+
+export const getStats = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = publicClient();
+  const [total, withLetter, withResponse, withCloseout, pending] = await Promise.all([
+    supabase.from("warning_letters").select("id", { count: "exact", head: true }),
+    supabase.from("warning_letters").select("id", { count: "exact", head: true }).not("letter_storage_path", "is", null),
+    supabase.from("warning_letters").select("id", { count: "exact", head: true }).not("response_storage_path", "is", null),
+    supabase.from("warning_letters").select("id", { count: "exact", head: true }).not("closeout_storage_path", "is", null),
+    supabase
+      .from("warning_letters")
+      .select("id", { count: "exact", head: true })
+      .or("letter_storage_path.is.null,and(response_url.not.is.null,response_storage_path.is.null),and(closeout_url.not.is.null,closeout_storage_path.is.null)"),
+  ]);
+  return {
+    total: total.count ?? 0,
+    archived: withLetter.count ?? 0,
+    withResponse: withResponse.count ?? 0,
+    withCloseout: withCloseout.count ?? 0,
+    pending: pending.count ?? 0,
+  };
 });
 
 export const getDownloadUrl = createServerFn({ method: "POST" })
@@ -28,67 +68,101 @@ export const getDownloadUrl = createServerFn({ method: "POST" })
     return { url: signed.signedUrl };
   });
 
-export const triggerScan = createServerFn({ method: "POST" }).handler(async () => {
-  const { fetchListing, fetchBinary, slugifyFromUrl } = await import("@/lib/fda-scraper.server");
+export const refreshCatalog = createServerFn({ method: "POST" }).handler(async () => {
+  const { fetchAllListings } = await import("@/lib/fda-scraper.server");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const rows = await fetchListing();
-  const urls = rows.map((r) => r.letter_url);
+  const rows = await fetchAllListings();
   const { data: existing } = await supabaseAdmin
     .from("warning_letters")
-    .select("letter_url")
-    .in("letter_url", urls);
-  const existingSet = new Set((existing ?? []).map((r) => r.letter_url));
-  const newRows = rows.filter((r) => !existingSet.has(r.letter_url));
-  let ingested = 0;
-  for (const row of newRows.slice(0, 25)) {
-    try {
-      const slug = slugifyFromUrl(row.letter_url);
-      const letter = await fetchBinary(row.letter_url);
-      const letterPath = `letters/${slug}.html`;
-      await supabaseAdmin.storage
-        .from("warning-letters")
-        .upload(letterPath, letter.body, { contentType: letter.contentType, upsert: true });
-
-      let response_storage_path: string | null = null;
-      if (row.response_url) {
-        try {
-          const resp = await fetchBinary(row.response_url);
-          const ext = resp.contentType.includes("pdf") ? "pdf" : "bin";
-          response_storage_path = `responses/${slug}.${ext}`;
-          await supabaseAdmin.storage
-            .from("warning-letters")
-            .upload(response_storage_path, resp.body, { contentType: resp.contentType, upsert: true });
-        } catch {}
-      }
-      let closeout_storage_path: string | null = null;
-      if (row.closeout_url) {
-        try {
-          const co = await fetchBinary(row.closeout_url);
-          const ext = co.contentType.includes("pdf") ? "pdf" : "bin";
-          closeout_storage_path = `closeouts/${slug}.${ext}`;
-          await supabaseAdmin.storage
-            .from("warning-letters")
-            .upload(closeout_storage_path, co.body, { contentType: co.contentType, upsert: true });
-        } catch {}
-      }
-      await supabaseAdmin.from("warning_letters").insert({
-        letter_url: row.letter_url,
-        posted_date: row.posted_date,
-        issue_date: row.issue_date,
-        company_name: row.company_name,
-        issuing_office: row.issuing_office,
-        subject: row.subject,
-        excerpt: row.excerpt,
-        letter_storage_path: letterPath,
-        response_url: row.response_url,
-        response_storage_path,
-        closeout_url: row.closeout_url,
-        closeout_storage_path,
-      });
-      ingested++;
-    } catch (e) {
-      console.error("ingest fail", row.letter_url, e);
+    .select("letter_url, response_url, closeout_url");
+  const existingMap = new Map((existing ?? []).map((r) => [r.letter_url, r] as const));
+  const toInsert = rows
+    .filter((r) => !existingMap.has(r.letter_url))
+    .map((r) => ({
+      letter_url: r.letter_url,
+      posted_date: r.posted_date,
+      issue_date: r.issue_date,
+      company_name: r.company_name,
+      issuing_office: r.issuing_office,
+      subject: r.subject,
+      excerpt: r.excerpt,
+      response_url: r.response_url,
+      closeout_url: r.closeout_url,
+    }));
+  for (let i = 0; i < toInsert.length; i += 500) {
+    const chunk = toInsert.slice(i, i + 500);
+    const { error } = await supabaseAdmin.from("warning_letters").insert(chunk as never);
+    if (error) throw error;
+  }
+  // Patch newly-added response/closeout URLs onto existing rows
+  let urlUpdates = 0;
+  for (const r of rows) {
+    const ex = existingMap.get(r.letter_url);
+    if (!ex) continue;
+    if (ex.response_url !== r.response_url || ex.closeout_url !== r.closeout_url) {
+      await supabaseAdmin
+        .from("warning_letters")
+        .update({ response_url: r.response_url, closeout_url: r.closeout_url })
+        .eq("letter_url", r.letter_url);
+      urlUpdates++;
     }
   }
-  return { total_listed: rows.length, new_ingested: ingested };
+  return { total_listed: rows.length, new_rows: toInsert.length, url_updates: urlUpdates };
 });
+
+export const processBatch = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({ limit: z.number().int().min(1).max(50).optional() }).parse(input ?? {}))
+  .handler(async ({ data }) => {
+    const { fetchBinary, slugifyFromUrl } = await import("@/lib/fda-scraper.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const limit = data.limit ?? 20;
+    const { data: pending, error } = await supabaseAdmin
+      .from("warning_letters")
+      .select("id, letter_url, response_url, response_storage_path, closeout_url, closeout_storage_path, letter_storage_path")
+      .or("letter_storage_path.is.null,and(response_url.not.is.null,response_storage_path.is.null),and(closeout_url.not.is.null,closeout_storage_path.is.null)")
+      .limit(limit);
+    if (error) throw error;
+    let processed = 0;
+    for (const row of pending ?? []) {
+      try {
+        const slug = slugifyFromUrl(row.letter_url);
+        const updates: Record<string, string> = {};
+        if (!row.letter_storage_path) {
+          const letter = await fetchBinary(row.letter_url);
+          const path = `letters/${slug}.html`;
+          const up = await supabaseAdmin.storage.from("warning-letters").upload(path, letter.body, { contentType: letter.contentType, upsert: true });
+          if (up.error) throw up.error;
+          updates.letter_storage_path = path;
+        }
+        if (row.response_url && !row.response_storage_path) {
+          try {
+            const resp = await fetchBinary(row.response_url);
+            const ext = resp.contentType.includes("pdf") ? "pdf" : "bin";
+            const path = `responses/${slug}.${ext}`;
+            const up = await supabaseAdmin.storage.from("warning-letters").upload(path, resp.body, { contentType: resp.contentType, upsert: true });
+            if (!up.error) updates.response_storage_path = path;
+          } catch (e) { console.error("response fail", e); }
+        }
+        if (row.closeout_url && !row.closeout_storage_path) {
+          try {
+            const co = await fetchBinary(row.closeout_url);
+            const ext = co.contentType.includes("pdf") ? "pdf" : "bin";
+            const path = `closeouts/${slug}.${ext}`;
+            const up = await supabaseAdmin.storage.from("warning-letters").upload(path, co.body, { contentType: co.contentType, upsert: true });
+            if (!up.error) updates.closeout_storage_path = path;
+          } catch (e) { console.error("closeout fail", e); }
+        }
+        if (Object.keys(updates).length) {
+          await supabaseAdmin.from("warning_letters").update(updates as never).eq("id", row.id);
+        }
+        processed++;
+      } catch (e) {
+        console.error("ingest fail", row.letter_url, e);
+      }
+    }
+    const { count: remaining } = await supabaseAdmin
+      .from("warning_letters")
+      .select("id", { count: "exact", head: true })
+      .or("letter_storage_path.is.null,and(response_url.not.is.null,response_storage_path.is.null),and(closeout_url.not.is.null,closeout_storage_path.is.null)");
+    return { processed, remaining: remaining ?? 0 };
+  });

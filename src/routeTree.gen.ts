@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicHooksScrapeFdaRouteImport } from './routes/api/public/hooks/scrape-fda'
+import { Route as ApiPublicHooksProcessPendingRouteImport } from './routes/api/public/hooks/process-pending'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,30 +23,47 @@ const ApiPublicHooksScrapeFdaRoute = ApiPublicHooksScrapeFdaRouteImport.update({
   path: '/api/public/hooks/scrape-fda',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksProcessPendingRoute =
+  ApiPublicHooksProcessPendingRouteImport.update({
+    id: '/api/public/hooks/process-pending',
+    path: '/api/public/hooks/process-pending',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/public/hooks/scrape-fda'
+  fullPaths:
+    | '/'
+    | '/api/public/hooks/process-pending'
+    | '/api/public/hooks/scrape-fda'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/public/hooks/scrape-fda'
-  id: '__root__' | '/' | '/api/public/hooks/scrape-fda'
+  to: '/' | '/api/public/hooks/process-pending' | '/api/public/hooks/scrape-fda'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/public/hooks/process-pending'
+    | '/api/public/hooks/scrape-fda'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiPublicHooksProcessPendingRoute: typeof ApiPublicHooksProcessPendingRoute
   ApiPublicHooksScrapeFdaRoute: typeof ApiPublicHooksScrapeFdaRoute
 }
 
@@ -65,11 +83,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksScrapeFdaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-pending': {
+      id: '/api/public/hooks/process-pending'
+      path: '/api/public/hooks/process-pending'
+      fullPath: '/api/public/hooks/process-pending'
+      preLoaderRoute: typeof ApiPublicHooksProcessPendingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiPublicHooksProcessPendingRoute: ApiPublicHooksProcessPendingRoute,
   ApiPublicHooksScrapeFdaRoute: ApiPublicHooksScrapeFdaRoute,
 }
 export const routeTree = rootRouteImport

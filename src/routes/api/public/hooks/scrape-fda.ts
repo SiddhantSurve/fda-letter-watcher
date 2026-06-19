@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { fetchListing, fetchBinary, slugifyFromUrl } from "@/lib/fda-scraper.server";
+import { fetchAllListings } from "@/lib/fda-scraper.server";
 
 export const Route = createFileRoute("/api/public/hooks/scrape-fda")({
   server: {
@@ -10,148 +10,76 @@ export const Route = createFileRoute("/api/public/hooks/scrape-fda")({
   },
 });
 
+// Listing-only pass: fetches the full FDA catalog (~3,500+ rows) via the
+// JSON datatables endpoint and upserts metadata. Files are downloaded
+// separately by /api/public/hooks/process-pending in batches.
 async function handler() {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const rows = await fetchListing();
+    const rows = await fetchAllListings();
 
-    // Find which letter_urls are new
-    const urls = rows.map((r) => r.letter_url);
     const { data: existing, error: exErr } = await supabaseAdmin
       .from("warning_letters")
-      .select("letter_url")
-      .in("letter_url", urls);
+      .select("letter_url, response_url, closeout_url");
     if (exErr) throw exErr;
-    const existingSet = new Set((existing ?? []).map((r) => r.letter_url));
+    const existingMap = new Map(
+      (existing ?? []).map((r) => [r.letter_url, r] as const),
+    );
 
-    const newRows = rows.filter((r) => !existingSet.has(r.letter_url));
-    const results: Array<{ url: string; ok: boolean; error?: string }> = [];
+    const toInsert: Array<Record<string, unknown>> = [];
+    const toUpdate: Array<{ letter_url: string; response_url: string | null; closeout_url: string | null }> = [];
 
-    for (const row of newRows) {
-      try {
-        const slug = slugifyFromUrl(row.letter_url);
-
-        // Download main letter (HTML page)
-        const letter = await fetchBinary(row.letter_url);
-        const letterPath = `letters/${slug}.html`;
-        const up1 = await supabaseAdmin.storage
-          .from("warning-letters")
-          .upload(letterPath, letter.body, { contentType: letter.contentType, upsert: true });
-        if (up1.error) throw up1.error;
-
-        let response_storage_path: string | null = null;
-        if (row.response_url) {
-          try {
-            const resp = await fetchBinary(row.response_url);
-            const ext = resp.contentType.includes("pdf") ? "pdf" : "bin";
-            response_storage_path = `responses/${slug}.${ext}`;
-            const up = await supabaseAdmin.storage
-              .from("warning-letters")
-              .upload(response_storage_path, resp.body, { contentType: resp.contentType, upsert: true });
-            if (up.error) throw up.error;
-          } catch (e) {
-            console.error("response download failed", row.response_url, e);
-            response_storage_path = null;
-          }
-        }
-
-        let closeout_storage_path: string | null = null;
-        if (row.closeout_url) {
-          try {
-            const co = await fetchBinary(row.closeout_url);
-            const ext = co.contentType.includes("pdf") ? "pdf" : "bin";
-            closeout_storage_path = `closeouts/${slug}.${ext}`;
-            const up = await supabaseAdmin.storage
-              .from("warning-letters")
-              .upload(closeout_storage_path, co.body, { contentType: co.contentType, upsert: true });
-            if (up.error) throw up.error;
-          } catch (e) {
-            console.error("closeout download failed", row.closeout_url, e);
-            closeout_storage_path = null;
-          }
-        }
-
-        const { error: insErr } = await supabaseAdmin.from("warning_letters").insert({
-          letter_url: row.letter_url,
-          posted_date: row.posted_date,
-          issue_date: row.issue_date,
-          company_name: row.company_name,
-          issuing_office: row.issuing_office,
-          subject: row.subject,
-          excerpt: row.excerpt,
-          letter_storage_path: letterPath,
-          response_url: row.response_url,
-          response_storage_path,
-          closeout_url: row.closeout_url,
-          closeout_storage_path,
+    for (const r of rows) {
+      const existing = existingMap.get(r.letter_url);
+      if (!existing) {
+        toInsert.push({
+          letter_url: r.letter_url,
+          posted_date: r.posted_date,
+          issue_date: r.issue_date,
+          company_name: r.company_name,
+          issuing_office: r.issuing_office,
+          subject: r.subject,
+          excerpt: r.excerpt,
+          response_url: r.response_url,
+          closeout_url: r.closeout_url,
         });
-        if (insErr) throw insErr;
-        results.push({ url: row.letter_url, ok: true });
-      } catch (e: any) {
-        console.error("Failed to ingest", row.letter_url, e);
-        results.push({ url: row.letter_url, ok: false, error: String(e?.message ?? e) });
+      } else if (
+        existing.response_url !== r.response_url ||
+        existing.closeout_url !== r.closeout_url
+      ) {
+        toUpdate.push({
+          letter_url: r.letter_url,
+          response_url: r.response_url,
+          closeout_url: r.closeout_url,
+        });
       }
     }
 
-    // Also: backfill response/closeout for previously-stored rows that now have new links
-    const { data: stored } = await supabaseAdmin
-      .from("warning_letters")
-      .select("id, letter_url, response_url, response_storage_path, closeout_url, closeout_storage_path")
-      .in("letter_url", urls);
-    const storedMap = new Map((stored ?? []).map((r) => [r.letter_url, r]));
-    for (const row of rows) {
-      const s = storedMap.get(row.letter_url);
-      if (!s) continue;
-      const updates: {
-        response_url?: string;
-        response_storage_path?: string;
-        closeout_url?: string;
-        closeout_storage_path?: string;
-      } = {};
-      const slug = slugifyFromUrl(row.letter_url);
+    // Insert in chunks
+    for (let i = 0; i < toInsert.length; i += 500) {
+      const chunk = toInsert.slice(i, i + 500);
+      const { error } = await supabaseAdmin.from("warning_letters").insert(chunk as never);
+      if (error) throw error;
+    }
 
-      if (row.response_url && !s.response_storage_path) {
-        try {
-          const resp = await fetchBinary(row.response_url);
-          const ext = resp.contentType.includes("pdf") ? "pdf" : "bin";
-          const p = `responses/${slug}.${ext}`;
-          const up = await supabaseAdmin.storage
-            .from("warning-letters")
-            .upload(p, resp.body, { contentType: resp.contentType, upsert: true });
-          if (!up.error) {
-            updates.response_url = row.response_url;
-            updates.response_storage_path = p;
-          }
-        } catch (e) { console.error("backfill response", e); }
-      }
-      if (row.closeout_url && !s.closeout_storage_path) {
-        try {
-          const co = await fetchBinary(row.closeout_url);
-          const ext = co.contentType.includes("pdf") ? "pdf" : "bin";
-          const p = `closeouts/${slug}.${ext}`;
-          const up = await supabaseAdmin.storage
-            .from("warning-letters")
-            .upload(p, co.body, { contentType: co.contentType, upsert: true });
-          if (!up.error) {
-            updates.closeout_url = row.closeout_url;
-            updates.closeout_storage_path = p;
-          }
-        } catch (e) { console.error("backfill closeout", e); }
-      }
-      if (Object.keys(updates).length) {
-        await supabaseAdmin.from("warning_letters").update(updates).eq("id", s.id);
-      }
+    // Patch response/closeout url additions on existing rows
+    for (const u of toUpdate) {
+      await supabaseAdmin
+        .from("warning_letters")
+        .update({ response_url: u.response_url, closeout_url: u.closeout_url })
+        .eq("letter_url", u.letter_url);
     }
 
     return Response.json({
       ok: true,
       total_listed: rows.length,
-      new_ingested: results.filter((r) => r.ok).length,
-      failures: results.filter((r) => !r.ok),
+      new_rows: toInsert.length,
+      url_updates: toUpdate.length,
     });
-  } catch (e: any) {
-    console.error("scrape-fda failed", e);
-    return new Response(JSON.stringify({ ok: false, error: String(e?.message ?? e) }), {
+  } catch (e) {
+    const err = e as Error;
+    console.error("scrape-fda failed", err);
+    return new Response(JSON.stringify({ ok: false, error: err.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
