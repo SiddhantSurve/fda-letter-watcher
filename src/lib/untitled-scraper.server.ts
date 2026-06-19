@@ -45,14 +45,18 @@ export async function fetchUntitledListings(): Promise<UntitledRow[]> {
   if (!res.ok) throw new Error(`Untitled page fetch failed: ${res.status}`);
   const html = await res.text();
 
-  // Grab the first <table>…</table> after the OPDP heading
-  const tableMatch = html.match(/<table[^>]*id="DataTables_Table_0"[\s\S]*?<\/table>/i)
-    ?? html.match(/<table[\s\S]*?<\/table>/i);
+  // Grab the OPDP Untitled Letters table
+  const tableMatch =
+    html.match(/<table[^>]*summary="Untitled Letters[^"]*"[\s\S]*?<\/table>/i) ??
+    html.match(/<table[^>]*class="table table-striped"[\s\S]*?<\/table>/i);
   if (!tableMatch) return [];
   const table = tableMatch[0];
 
+  const absolutize = (u: string) =>
+    u.startsWith("http") ? u : `https://www.fda.gov${u.startsWith("/") ? "" : "/"}${u}`;
+
   const rows: UntitledRow[] = [];
-  const rowRe = /<tr[^>]*role="row"[^>]*>([\s\S]*?)<\/tr>/gi;
+  const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
   let r;
   while ((r = rowRe.exec(table))) {
     const inner = r[1];
@@ -69,8 +73,10 @@ export async function fetchUntitledListings(): Promise<UntitledRow[]> {
     // Company cell holds the company name (first <p>) + a list of PDF links
     const companyP = companyCell.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
     const company = stripTags(companyP ? companyP[1] : companyCell.split("<ul")[0]);
-    const letterUrl = findFirstPdfHref(companyCell, /untitled letter/i);
-    if (!letterUrl) continue;
+    const letterUrlRaw = findFirstPdfHref(companyCell, /untitled letter/i);
+    if (!letterUrlRaw) continue;
+    const letterUrl = absolutize(letterUrlRaw);
+
 
     const promoUrl = findFirstPdfHref(companyCell, /promotional/i);
     const product = stripTags(productCell);
