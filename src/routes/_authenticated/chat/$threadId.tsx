@@ -170,7 +170,7 @@ function Dashboard() {
         <div className="bg-card border rounded-lg p-5">
           <h2 className="text-sm font-semibold mb-1">About this tracker</h2>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            This workspace monitors FDA warning letters in real-time. Use the chat interface to query trends, common violations, and specific compliance themes across the entire database, or use the <strong>"Ask me"</strong> feature next to individual letters to chat directly with that specific document.
+            This workspace monitors FDA {isUntitled ? "untitled" : "warning"} letters in real-time. Use the chat interface to query trends, common violations, and specific compliance themes across the entire database, or use the <strong>"Ask me"</strong> feature next to individual letters to chat directly with that specific document.
           </p>
         </div>
 
