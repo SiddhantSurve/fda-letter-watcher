@@ -102,7 +102,12 @@ async function handler() {
     for (const row of rows) {
       const s = storedMap.get(row.letter_url);
       if (!s) continue;
-      const updates: Record<string, unknown> = {};
+      const updates: {
+        response_url?: string;
+        response_storage_path?: string;
+        closeout_url?: string;
+        closeout_storage_path?: string;
+      } = {};
       const slug = slugifyFromUrl(row.letter_url);
 
       if (row.response_url && !s.response_storage_path) {
