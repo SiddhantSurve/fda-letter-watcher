@@ -220,8 +220,9 @@ function Dashboard() {
             )}
           </section>
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
+  </div>
   );
 }
 
