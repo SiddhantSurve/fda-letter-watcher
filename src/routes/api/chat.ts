@@ -45,7 +45,7 @@ export const Route = createFileRoute("/api/chat")({
           ).slice(0, 8);
 
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          let matches: Array<{ company_name: string; subject: string; posted_date: string | null; issuing_office: string | null; summary: string | null; excerpt: string | null; letter_url: string }> = [];
+          let matches: Array<{ company_name: string; subject: string | null; posted_date: string | null; issuing_office: string | null; summary: string | null; excerpt: string | null; letter_url: string }> = [];
           if (tokens.length > 0) {
             const orExpr = tokens
               .map((t) => `summary.ilike.%${t}%,company_name.ilike.%${t}%,subject.ilike.%${t}%,issuing_office.ilike.%${t}%,excerpt.ilike.%${t}%`)
