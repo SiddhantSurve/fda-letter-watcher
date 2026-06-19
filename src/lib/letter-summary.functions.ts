@@ -8,8 +8,7 @@ const Input = z.object({ letterId: z.string().uuid() });
 export const summarizeLetter = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("Missing LOVABLE_API_KEY");
+
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: letter, error } = await supabaseAdmin
