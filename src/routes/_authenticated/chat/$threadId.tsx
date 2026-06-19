@@ -117,9 +117,15 @@ function Dashboard() {
         <div className="mx-auto max-w-7xl px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">FDA Warning Letter Tracker</h1>
-            <p className="text-xs text-muted-foreground mt-1">
-              {statsQ.data?.total.toLocaleString() ?? "—"} letters in the archive
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+              </span>
+              <p className="text-xs text-muted-foreground">
+                Actively reading through {statsQ.data?.total.toLocaleString() ?? "—"} letters...
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
@@ -133,10 +139,19 @@ function Dashboard() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-6 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
-        {/* Thread sidebar */}
-        <aside className="space-y-2">
-          <Button onClick={newThread} className="w-full" size="sm">
+      <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
+        {/* Explanatory Header */}
+        <div className="bg-card border rounded-lg p-5">
+          <h2 className="text-sm font-semibold mb-1">About this tracker</h2>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            This workspace monitors FDA warning letters in real-time. Use the chat interface to query trends, common violations, and specific compliance themes across the entire database, or use the <strong>"Ask me"</strong> feature next to individual letters to chat directly with that specific document.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
+          {/* Thread sidebar */}
+          <aside className="space-y-2">
+            <Button onClick={newThread} className="w-full" size="sm">
             <Plus className="mr-2 h-4 w-4" /> New chat
           </Button>
           <div className="space-y-1">
@@ -205,8 +220,9 @@ function Dashboard() {
             )}
           </section>
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
+  </div>
   );
 }
 
