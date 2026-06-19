@@ -9,12 +9,14 @@ import {
   listLetters,
   getStats,
   refreshCatalog,
+  refreshUntitledCatalog,
 } from "@/lib/letters.functions";
 import {
   listThreads,
   createThread,
   deleteThread,
   getThreadMessages,
+  getThread,
 } from "@/lib/chat.functions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
