@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          role: string
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          id?: string
+          role: string
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          role?: string
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       warning_letters: {
         Row: {
           closeout_storage_path: string | null
@@ -30,6 +89,7 @@ export type Database = {
           response_storage_path: string | null
           response_url: string | null
           subject: string | null
+          summary: string | null
         }
         Insert: {
           closeout_storage_path?: string | null
@@ -46,6 +106,7 @@ export type Database = {
           response_storage_path?: string | null
           response_url?: string | null
           subject?: string | null
+          summary?: string | null
         }
         Update: {
           closeout_storage_path?: string | null
@@ -62,6 +123,7 @@ export type Database = {
           response_storage_path?: string | null
           response_url?: string | null
           subject?: string | null
+          summary?: string | null
         }
         Relationships: []
       }
