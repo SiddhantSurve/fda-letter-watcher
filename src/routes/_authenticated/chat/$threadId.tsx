@@ -100,7 +100,7 @@ function Dashboard() {
   });
 
   const refreshMut = useMutation({
-    mutationFn: () => refresh(),
+    mutationFn: () => (isUntitled ? refreshUntitled() : refresh()),
     onSuccess: (r) => {
       toast.success(`Catalog refreshed — ${r.new_rows} new letter(s)`);
       qc.invalidateQueries({ queryKey: ["letters"] });
@@ -115,7 +115,7 @@ function Dashboard() {
   };
 
   const newThread = async () => {
-    const { id } = await createThreadFn();
+    const { id } = await createThreadFn({ data: { kind } });
     qc.invalidateQueries({ queryKey: ["threads"] });
     navigate({ to: "/chat/$threadId", params: { threadId: id } });
   };
@@ -139,18 +139,21 @@ function Dashboard() {
       <header className="border-b border-t-4 border-t-primary">
         <div className="mx-auto max-w-7xl px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">FDA Warning Letter Tracker</h1>
+            <h1 className="text-2xl font-bold tracking-tight">FDA {kindLabel} Tracker</h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
               </span>
               <p className="text-xs text-muted-foreground">
-                Actively reading through {statsQ.data?.total.toLocaleString() ?? "—"} letters...
+                Actively reading through {statsQ.data?.total.toLocaleString() ?? "—"} {isUntitled ? "untitled" : "warning"} letters...
               </p>
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/" })}>
+              Switch archive
+            </Button>
             <Button variant="outline" size="sm" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
               <RefreshCw className={`mr-2 h-3.5 w-3.5 ${refreshMut.isPending ? "animate-spin" : ""}`} />
               Refresh catalog
