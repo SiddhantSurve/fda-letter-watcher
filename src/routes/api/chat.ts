@@ -1,13 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { lovableGateway } from "@/lib/ai-gateway.server";
+import { getLetterText } from "@/lib/letter-context.server";
 
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
-          const body = (await request.json()) as { messages?: UIMessage[]; threadId?: string };
+          const body = (await request.json()) as {
+            messages?: UIMessage[];
+            threadId?: string;
+            letterId?: string;
+          };
           const messages = body.messages ?? [];
           if (!Array.isArray(messages) || messages.length === 0) {
             return new Response("messages required", { status: 400 });
@@ -22,7 +27,10 @@ export const Route = createFileRoute("/api/chat")({
           const supabase = createClient(
             process.env.SUPABASE_URL!,
             process.env.SUPABASE_PUBLISHABLE_KEY!,
-            { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
+            {
+              global: { headers: { Authorization: `Bearer ${token}` } },
+              auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
+            },
           );
           const { data: claims } = await supabase.auth.getClaims(token);
           const userId = claims?.claims?.sub;
@@ -33,44 +41,96 @@ export const Route = createFileRoute("/api/chat")({
             ? lastUser.parts.map((p) => (p.type === "text" ? p.text : "")).join(" ").trim()
             : "";
 
-          // Keyword search over letter summaries / metadata
-          const tokens = Array.from(
-            new Set(
-              userText
-                .toLowerCase()
-                .replace(/[^\w\s]/g, " ")
-                .split(/\s+/)
-                .filter((t) => t.length > 3 && !STOP.has(t)),
-            ),
-          ).slice(0, 8);
-
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          let matches: Array<{ company_name: string; subject: string | null; posted_date: string | null; issuing_office: string | null; summary: string | null; excerpt: string | null; letter_url: string }> = [];
-          if (tokens.length > 0) {
-            const orExpr = tokens
-              .map((t) => `summary.ilike.%${t}%,company_name.ilike.%${t}%,subject.ilike.%${t}%,issuing_office.ilike.%${t}%,excerpt.ilike.%${t}%`)
-              .join(",");
-            const { data } = await supabaseAdmin
+
+          // ── Build context ────────────────────────────────────────────────
+          let system: string;
+
+          if (body.letterId) {
+            // Per-letter chat: scope strictly to one letter, fetch its full text.
+            const { data: letter } = await supabaseAdmin
               .from("warning_letters")
-              .select("company_name, subject, posted_date, issuing_office, summary, excerpt, letter_url")
-              .or(orExpr)
-              .limit(12);
-            matches = data ?? [];
-          }
+              .select(
+                "company_name, subject, posted_date, issue_date, issuing_office, letter_url, letter_storage_path",
+              )
+              .eq("id", body.letterId)
+              .single();
 
-          const context = matches.length
-            ? matches
+            if (!letter) return new Response("Letter not found", { status: 404 });
+
+            const text = await getLetterText({
+              letterUrl: letter.letter_url,
+              storagePath: letter.letter_storage_path,
+            });
+
+            system = `You are an expert assistant answering questions about a single FDA warning letter. Use ONLY the letter content below. If the answer isn't in it, say so plainly.
+
+Letter metadata:
+- Company: ${letter.company_name}
+- Subject: ${letter.subject ?? "—"}
+- Posted: ${letter.posted_date ?? "—"}  Issued: ${letter.issue_date ?? "—"}
+- Issuing office: ${letter.issuing_office ?? "—"}
+- Source: ${letter.letter_url}
+
+Letter content:
+${text || "(unable to load letter content)"}`;
+          } else {
+            // Archive-wide chat: keyword search → fetch full text of top matches.
+            const tokens = Array.from(
+              new Set(
+                userText
+                  .toLowerCase()
+                  .replace(/[^\w\s]/g, " ")
+                  .split(/\s+/)
+                  .filter((t) => t.length > 3 && !STOP.has(t)),
+              ),
+            ).slice(0, 8);
+
+            let matches: Array<{
+              id: string;
+              company_name: string;
+              subject: string | null;
+              posted_date: string | null;
+              issuing_office: string | null;
+              letter_url: string;
+              letter_storage_path: string | null;
+            }> = [];
+
+            if (tokens.length > 0) {
+              const orExpr = tokens
                 .map(
-                  (m, i) =>
-                    `[${i + 1}] ${m.company_name} — ${m.subject} (posted ${m.posted_date ?? "?"}, ${m.issuing_office ?? "?"})\nSummary: ${m.summary ?? m.excerpt ?? "(no summary yet)"}\nSource: ${m.letter_url}`,
+                  (t) =>
+                    `company_name.ilike.%${t}%,subject.ilike.%${t}%,issuing_office.ilike.%${t}%,excerpt.ilike.%${t}%`,
                 )
-                .join("\n\n")
-            : "(no matching letters found in the archive)";
+                .join(",");
+              const { data } = await supabaseAdmin
+                .from("warning_letters")
+                .select("id, company_name, subject, posted_date, issuing_office, letter_url, letter_storage_path")
+                .or(orExpr)
+                .limit(4);
+              matches = data ?? [];
+            }
 
-          const system = `You are an expert assistant answering questions about FDA warning letters. Use ONLY the provided letter excerpts below to answer. If the answer isn't in them, say so. Always cite letters by [number] and include the company name.
+            // Fetch full text for each match in parallel (capped to 4)
+            const enriched = await Promise.all(
+              matches.map(async (m, i) => {
+                const text = await getLetterText({
+                  letterUrl: m.letter_url,
+                  storagePath: m.letter_storage_path,
+                });
+                return `[${i + 1}] ${m.company_name} — ${m.subject ?? "(no subject)"} (posted ${m.posted_date ?? "?"}, ${m.issuing_office ?? "?"})\nSource: ${m.letter_url}\n---\n${text || "(content unavailable)"}`;
+              }),
+            );
+
+            const context = enriched.length
+              ? enriched.join("\n\n========\n\n")
+              : "(no matching letters found in the archive)";
+
+            system = `You are an expert assistant answering questions about FDA warning letters. Use ONLY the retrieved letter content below to answer. If the answer isn't in them, say so. Cite letters by [number] and the company name.
 
 Retrieved letters:
 ${context}`;
+          }
 
           const gateway = lovableGateway();
           const result = streamText({
@@ -78,9 +138,9 @@ ${context}`;
             system,
             messages: await convertToModelMessages(messages),
             onFinish: async ({ text }) => {
-              if (!body.threadId) return;
+              // Only persist for archive-wide threaded chats
+              if (!body.threadId || body.letterId) return;
               try {
-                // Persist both the latest user message and the assistant reply
                 const userPayload = lastUser
                   ? { thread_id: body.threadId, user_id: userId, role: "user", content: { parts: lastUser.parts } as never }
                   : null;
@@ -95,7 +155,6 @@ ${context}`;
                 ];
                 await supabase.from("chat_messages").insert(inserts as never);
 
-                // Auto-title thread on first exchange
                 if (userText) {
                   const { count } = await supabase
                     .from("chat_messages")
