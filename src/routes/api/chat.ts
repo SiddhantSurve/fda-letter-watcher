@@ -63,7 +63,7 @@ export const Route = createFileRoute("/api/chat")({
             const { data: letter } = await supabaseAdmin
               .from("warning_letters")
               .select(
-                "company_name, subject, posted_date, issue_date, issuing_office, letter_url, letter_storage_path, letter_kind",
+                "company_name, subject, posted_date, issue_date, issuing_office, letter_url, letter_storage_path, letter_kind, excerpt, response_url, closeout_url",
               )
               .eq("id", body.letterId)
               .single();
@@ -71,14 +71,25 @@ export const Route = createFileRoute("/api/chat")({
             if (!letter) return new Response("Letter not found", { status: 404 });
 
             const isUntitled = letter.letter_kind === "untitled";
-            const text = isUntitled
-              ? ""
-              : await getLetterText({
-                  letterUrl: letter.letter_url,
-                  storagePath: letter.letter_storage_path,
-                });
+            const promoMatch = letter.excerpt?.match(/https?:\/\/\S+/);
+            const promoUrl = promoMatch ? promoMatch[0] : null;
 
-            system = `You are an expert assistant answering questions about a single ${isUntitled ? "FDA untitled letter" : "FDA warning letter"}. Use ONLY the information below. If the answer isn't in it, say so plainly.
+            const [text, responseText, closeoutText] = await Promise.all([
+              isUntitled
+                ? Promise.resolve("")
+                : getLetterText({
+                    letterUrl: letter.letter_url,
+                    storagePath: letter.letter_storage_path,
+                  }),
+              letter.response_url
+                ? getLetterText({ letterUrl: letter.response_url, storagePath: null })
+                : Promise.resolve(""),
+              letter.closeout_url
+                ? getLetterText({ letterUrl: letter.closeout_url, storagePath: null })
+                : Promise.resolve(""),
+            ]);
+
+            system = `You are an expert assistant answering questions about a single ${isUntitled ? "FDA untitled letter" : "FDA warning letter"} and its related correspondence (company response, FDA close-out, promotional material when present). Use ONLY the information below. If the answer isn't in it, say so plainly.
 
 Letter metadata:
 - Company: ${letter.company_name}
@@ -86,10 +97,13 @@ Letter metadata:
 - Posted: ${letter.posted_date ?? "—"}  Issued: ${letter.issue_date ?? "—"}
 - Issuing office: ${letter.issuing_office ?? "—"}
 - Source PDF: ${letter.letter_url}
-
+${promoUrl ? `- Promotional material: ${promoUrl}\n` : ""}${letter.response_url ? `- Response letter: ${letter.response_url}\n` : ""}${letter.closeout_url ? `- Close-out letter: ${letter.closeout_url}\n` : ""}
 ${isUntitled
   ? "This letter's full content is a PDF that has not been parsed into text. Use the metadata above and your general knowledge of FDA promotional-communications enforcement to discuss the product/issue at a high level, and always point the user to the source PDF for specifics."
-  : `Letter content:\n${text || "(unable to load letter content)"}`}`;
+  : `Letter content:\n${text || "(unable to load letter content)"}`}
+${responseText ? `\nCompany response letter content:\n${responseText}` : letter.response_url ? "\n(A response letter exists but its content could not be parsed — refer the user to the URL above.)" : ""}
+${closeoutText ? `\nFDA close-out letter content:\n${closeoutText}` : letter.closeout_url ? "\n(A close-out letter exists but its content could not be parsed — refer the user to the URL above.)" : ""}`;
+
           } else {
             // Archive-wide chat: keyword search → fetch full text of top matches.
             const tokens = Array.from(
