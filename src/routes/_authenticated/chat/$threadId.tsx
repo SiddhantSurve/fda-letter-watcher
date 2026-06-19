@@ -76,26 +76,24 @@ function Dashboard() {
   const kind = threadQ.data?.kind ?? "warning";
   const isUntitled = kind === "untitled";
   const kindLabel = isUntitled ? "Untitled Letter" : "Warning Letter";
-  const navigate = useNavigate();
-  const qc = useQueryClient();
-
-  const list = useServerFn(listLetters);
-  const stats = useServerFn(getStats);
-  const refresh = useServerFn(refreshCatalog);
-  const listThreadsFn = useServerFn(listThreads);
-  const createThreadFn = useServerFn(createThread);
-  const deleteThreadFn = useServerFn(deleteThread);
-  const getMsgs = useServerFn(getThreadMessages);
-
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
 
   const lettersQ = useQuery({
-    queryKey: ["letters", q, page],
-    queryFn: () => list({ data: { search: q, limit: PAGE_SIZE, offset: page * PAGE_SIZE } }),
+    queryKey: ["letters", kind, q, page],
+    queryFn: () => list({ data: { search: q, limit: PAGE_SIZE, offset: page * PAGE_SIZE, kind } }),
+    enabled: !!threadQ.data,
   });
-  const statsQ = useQuery({ queryKey: ["stats"], queryFn: () => stats() });
-  const threadsQ = useQuery({ queryKey: ["threads"], queryFn: () => listThreadsFn() });
+  const statsQ = useQuery({
+    queryKey: ["stats", kind],
+    queryFn: () => stats({ data: { kind } }),
+    enabled: !!threadQ.data,
+  });
+  const threadsQ = useQuery({
+    queryKey: ["threads", kind],
+    queryFn: () => listThreadsFn({ data: { kind } }),
+    enabled: !!threadQ.data,
+  });
   const initialMsgsQ = useQuery({
     queryKey: ["msgs", threadId],
     queryFn: () => getMsgs({ data: { threadId } }),
