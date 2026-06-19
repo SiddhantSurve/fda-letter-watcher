@@ -2,27 +2,48 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-export const listThreads = createServerFn({ method: "GET" })
+export const listThreads = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .inputValidator((input) =>
+    z.object({ kind: z.enum(["warning", "untitled"]).optional() }).parse(input ?? {}),
+  )
+  .handler(async ({ context, data }) => {
+    let q = context.supabase
       .from("chat_threads")
-      .select("id, title, updated_at")
+      .select("id, title, updated_at, letter_kind")
       .order("updated_at", { ascending: false });
+    if (data.kind) q = q.eq("letter_kind", data.kind);
+    const { data: rows, error } = await q;
     if (error) throw error;
-    return data ?? [];
+    return rows ?? [];
   });
 
 export const createThread = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .inputValidator((input) =>
+    z.object({ kind: z.enum(["warning", "untitled"]).optional() }).parse(input ?? {}),
+  )
+  .handler(async ({ context, data }) => {
+    const { data: row, error } = await context.supabase
       .from("chat_threads")
-      .insert({ user_id: context.userId, title: "New chat" })
-      .select("id")
+      .insert({ user_id: context.userId, title: "New chat", letter_kind: data.kind ?? "warning" })
+      .select("id, letter_kind")
       .single();
     if (error) throw error;
-    return { id: data.id };
+    return { id: row.id, kind: row.letter_kind as "warning" | "untitled" };
+  });
+
+export const getThread = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ context, data }) => {
+    const { data: row, error } = await context.supabase
+      .from("chat_threads")
+      .select("id, title, letter_kind")
+      .eq("id", data.id)
+      .single();
+    if (error) throw error;
+    return { id: row.id, title: row.title, kind: row.letter_kind as "warning" | "untitled" };
   });
 
 export const deleteThread = createServerFn({ method: "POST" })
