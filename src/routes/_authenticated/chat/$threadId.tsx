@@ -208,6 +208,7 @@ function Dashboard() {
           <ChatPanel
             key={threadId}
             threadId={threadId}
+            kind={kind}
             initialMessages={initialMsgsQ.data as UIMessage[] | undefined}
             onSent={() => qc.invalidateQueries({ queryKey: ["threads"] })}
           />
