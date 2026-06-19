@@ -43,9 +43,15 @@ export async function getLetterText(opts: {
       headers: { "User-Agent": "Mozilla/5.0 (Lovable FDA Letter Tracker)" },
     });
     if (!res.ok) return "";
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("html") && !ct.includes("text")) {
+      // Binary (likely PDF) — skip; caller will fall back to URL reference.
+      return "";
+    }
     return htmlToText(await res.text());
   } catch (e) {
     console.error("fetch letter URL failed", e);
     return "";
   }
 }
+
