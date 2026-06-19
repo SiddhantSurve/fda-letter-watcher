@@ -460,7 +460,7 @@ function ChatPanel({
         <Textarea
           ref={taRef}
           rows={1}
-          placeholder="Ask a question about FDA warning letters…"
+          placeholder={`Ask a question about FDA ${kind === "untitled" ? "untitled" : "warning"} letters…`}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
