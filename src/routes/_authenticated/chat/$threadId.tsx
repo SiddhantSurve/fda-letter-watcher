@@ -36,6 +36,9 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { LetterChatDialog } from "@/components/letter-chat-dialog";
+import { summarizeLetter } from "@/lib/letter-summary.functions";
+import ReactMarkdown from "react-markdown";
+import { Sparkles, Loader2 } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
