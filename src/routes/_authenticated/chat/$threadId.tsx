@@ -36,6 +36,9 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { LetterChatDialog } from "@/components/letter-chat-dialog";
+import { summarizeLetter } from "@/lib/letter-summary.functions";
+import ReactMarkdown from "react-markdown";
+import { Sparkles, Loader2 } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -243,6 +246,12 @@ type Letter = {
 
 function LetterCard({ letter: l }: { letter: Letter }) {
   const [chatOpen, setChatOpen] = useState(false);
+  const summarizeFn = useServerFn(summarizeLetter);
+  const summaryMut = useMutation({
+    mutationFn: () => summarizeFn({ data: { letterId: l.id } }),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Could not generate summary"),
+  });
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -255,10 +264,15 @@ function LetterCard({ letter: l }: { letter: Letter }) {
           <h3 className="mt-1 font-semibold">{l.company_name}</h3>
           <p className="text-sm text-muted-foreground mt-0.5">{l.subject}</p>
           <p className="text-xs text-muted-foreground mt-1">{l.issuing_office}</p>
-          {l.excerpt && (
+          {l.excerpt && !summaryMut.data && (
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground line-clamp-3">
               {l.excerpt}
             </p>
+          )}
+          {summaryMut.data && (
+            <div className="mt-3 rounded-md border border-primary/20 bg-accent/40 p-3 text-sm prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1">
+              <ReactMarkdown>{summaryMut.data.summary}</ReactMarkdown>
+            </div>
           )}
           <div className="mt-3 flex flex-wrap gap-1.5">
             {l.response_url && <Badge variant="secondary">Response letter</Badge>}
@@ -268,6 +282,19 @@ function LetterCard({ letter: l }: { letter: Letter }) {
         <div className="flex flex-col items-end gap-2 shrink-0">
           <Button size="sm" variant="outline" onClick={() => setChatOpen(true)}>
             <MessageCircle className="mr-1.5 h-3.5 w-3.5" /> Ask me
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={summaryMut.isPending}
+            onClick={() => summaryMut.mutate()}
+          >
+            {summaryMut.isPending ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            {summaryMut.data ? "Regenerate" : "Summarize"}
           </Button>
           <a
             href={l.letter_url}
@@ -289,6 +316,7 @@ function LetterCard({ letter: l }: { letter: Letter }) {
     </Card>
   );
 }
+
 
 function Pager({ page, setPage, total }: { page: number; setPage: (n: number) => void; total: number }) {
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
