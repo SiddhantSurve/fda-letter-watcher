@@ -47,8 +47,8 @@ const PAGE_SIZE = 25;
 export const Route = createFileRoute("/_authenticated/chat/$threadId")({
   head: () => ({
     meta: [
-      { title: "FDA Warning Letter Tracker" },
-      { name: "description", content: "Chat with the FDA warning letter archive." },
+      { title: "FDA Letter Tracker" },
+      { name: "description", content: "Chat with FDA warning and untitled letters." },
     ],
   }),
   component: Dashboard,
@@ -56,6 +56,26 @@ export const Route = createFileRoute("/_authenticated/chat/$threadId")({
 
 function Dashboard() {
   const { threadId } = useParams({ from: "/_authenticated/chat/$threadId" });
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+
+  const list = useServerFn(listLetters);
+  const stats = useServerFn(getStats);
+  const refresh = useServerFn(refreshCatalog);
+  const refreshUntitled = useServerFn(refreshUntitledCatalog);
+  const listThreadsFn = useServerFn(listThreads);
+  const createThreadFn = useServerFn(createThread);
+  const deleteThreadFn = useServerFn(deleteThread);
+  const getMsgs = useServerFn(getThreadMessages);
+  const getThreadFn = useServerFn(getThread);
+
+  const threadQ = useQuery({
+    queryKey: ["thread", threadId],
+    queryFn: () => getThreadFn({ data: { id: threadId } }),
+  });
+  const kind = threadQ.data?.kind ?? "warning";
+  const isUntitled = kind === "untitled";
+  const kindLabel = isUntitled ? "Untitled Letter" : "Warning Letter";
   const navigate = useNavigate();
   const qc = useQueryClient();
 
