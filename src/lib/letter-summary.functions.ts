@@ -25,7 +25,7 @@ export const summarizeLetter = createServerFn({ method: "POST" })
     });
     if (!text) throw new Error("Could not retrieve letter text");
 
-    const gateway = createLovableAiGatewayProvider(key);
+    const gateway = lovableGateway();
     const { text: summary } = await generateText({
       model: gateway("google/gemini-3-flash-preview"),
       messages: [
