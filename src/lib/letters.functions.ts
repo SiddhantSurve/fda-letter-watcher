@@ -17,6 +17,8 @@ export const listLetters = createServerFn({ method: "GET" })
       limit: z.number().int().min(1).max(200).optional(),
       offset: z.number().int().min(0).optional(),
       kind: z.enum(["warning", "untitled"]).optional(),
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     }).parse(input ?? {}),
   )
   .handler(async ({ data }) => {
@@ -31,6 +33,8 @@ export const listLetters = createServerFn({ method: "GET" })
       .order("posted_on", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
+    if (data.from) q = q.gte("posted_on", data.from);
+    if (data.to) q = q.lte("posted_on", data.to);
     if (data.search) {
       const s = data.search.replace(/[%_]/g, "");
       q = q.or(`company_name.ilike.%${s}%,subject.ilike.%${s}%,issuing_office.ilike.%${s}%`);
