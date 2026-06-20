@@ -78,10 +78,12 @@ function Dashboard() {
   const kindLabel = isUntitled ? "Untitled Letter" : "Warning Letter";
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   const lettersQ = useQuery({
-    queryKey: ["letters", kind, q, page],
-    queryFn: () => list({ data: { search: q, limit: PAGE_SIZE, offset: page * PAGE_SIZE, kind } }),
+    queryKey: ["letters", kind, q, page, from, to],
+    queryFn: () => list({ data: { search: q, limit: PAGE_SIZE, offset: page * PAGE_SIZE, kind, from: from || undefined, to: to || undefined } }),
     enabled: !!threadQ.data,
   });
   const statsQ = useQuery({
@@ -217,14 +219,43 @@ function Dashboard() {
           <section>
             <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
               <h2 className="text-lg font-semibold">Archive</h2>
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search company, subject, office…"
-                  value={q}
-                  onChange={(e) => { setQ(e.target.value); setPage(0); }}
-                  className="pl-9"
-                />
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
+                  <Input
+                    type="date"
+                    value={from}
+                    onChange={(e) => { setFrom(e.target.value); setPage(0); }}
+                    className="h-9 w-[150px]"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">To</label>
+                  <Input
+                    type="date"
+                    value={to}
+                    onChange={(e) => { setTo(e.target.value); setPage(0); }}
+                    className="h-9 w-[150px]"
+                  />
+                </div>
+                {(from || to) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setFrom(""); setTo(""); setPage(0); }}
+                  >
+                    Clear
+                  </Button>
+                )}
+                <div className="relative flex-1 min-w-[200px] max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search company, subject, office…"
+                    value={q}
+                    onChange={(e) => { setQ(e.target.value); setPage(0); }}
+                    className="pl-9"
+                  />
+                </div>
               </div>
             </div>
 
