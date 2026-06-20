@@ -90,6 +90,7 @@ export type Database = {
           letter_storage_path: string | null
           letter_url: string
           posted_date: string | null
+          posted_on: string | null
           response_storage_path: string | null
           response_url: string | null
           subject: string | null
@@ -108,6 +109,7 @@ export type Database = {
           letter_storage_path?: string | null
           letter_url: string
           posted_date?: string | null
+          posted_on?: string | null
           response_storage_path?: string | null
           response_url?: string | null
           subject?: string | null
@@ -126,6 +128,7 @@ export type Database = {
           letter_storage_path?: string | null
           letter_url?: string
           posted_date?: string | null
+          posted_on?: string | null
           response_storage_path?: string | null
           response_url?: string | null
           subject?: string | null

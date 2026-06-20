@@ -28,7 +28,8 @@ export const listLetters = createServerFn({ method: "GET" })
       .from("warning_letters")
       .select("*", { count: "exact" })
       .eq("letter_kind", kind)
-      .order("posted_date", { ascending: false })
+      .order("posted_on", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
     if (data.search) {
       const s = data.search.replace(/[%_]/g, "");
