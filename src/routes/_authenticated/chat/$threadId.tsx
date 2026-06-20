@@ -78,10 +78,12 @@ function Dashboard() {
   const kindLabel = isUntitled ? "Untitled Letter" : "Warning Letter";
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   const lettersQ = useQuery({
-    queryKey: ["letters", kind, q, page],
-    queryFn: () => list({ data: { search: q, limit: PAGE_SIZE, offset: page * PAGE_SIZE, kind } }),
+    queryKey: ["letters", kind, q, page, from, to],
+    queryFn: () => list({ data: { search: q, limit: PAGE_SIZE, offset: page * PAGE_SIZE, kind, from: from || undefined, to: to || undefined } }),
     enabled: !!threadQ.data,
   });
   const statsQ = useQuery({
