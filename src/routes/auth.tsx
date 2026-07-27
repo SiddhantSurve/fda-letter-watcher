@@ -9,7 +9,22 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Sign in — FDA Warning Letter Tracker" }] }),
+  head: () => ({
+    meta: [
+      { title: "Sign in — FDA Warning Letter Tracker" },
+      {
+        name: "description",
+        content: "Sign in to the FDA letter archive to search, summarize, and chat with warning and untitled letters.",
+      },
+      { property: "og:title", content: "Sign in — FDA Warning Letter Tracker" },
+      {
+        property: "og:description",
+        content: "Access the FDA letter archive with document summaries and archive-aware chat.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: AuthPage,
 });
 
@@ -25,20 +40,30 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: `${window.location.origin}/` },
         });
         if (error) throw error;
-        toast.success("Account created — signing you in…");
+        if (!data.session) {
+          toast.success("Account created. Please confirm your email, then sign in.");
+          setMode("signin");
+          return;
+        }
+        toast.success("Account created — signed in.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
       navigate({ to: "/" });
     } catch (e) {
-      toast.error((e as Error).message);
+      const message = (e as Error).message;
+      toast.error(
+        message === "Email not confirmed"
+          ? "This account has not confirmed its email yet. Please use the confirmation email, then sign in."
+          : message,
+      );
     } finally {
       setBusy(false);
     }
