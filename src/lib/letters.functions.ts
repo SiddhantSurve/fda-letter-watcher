@@ -19,6 +19,7 @@ export const listLetters = createServerFn({ method: "GET" })
       kind: z.enum(["warning", "untitled"]).optional(),
       from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      sort: z.enum(["posted_desc", "posted_asc", "company_asc", "company_desc"]).optional(),
     }).parse(input ?? {}),
   )
   .handler(async ({ data }) => {
@@ -26,13 +27,26 @@ export const listLetters = createServerFn({ method: "GET" })
     const limit = data.limit ?? 50;
     const offset = data.offset ?? 0;
     const kind = data.kind ?? "warning";
+    const sort = data.sort ?? "posted_desc";
+
+    const sortMap: Record<typeof sort, { column: string; ascending: boolean; nullsFirst?: boolean }> = {
+      posted_desc: { column: "posted_on", ascending: false, nullsFirst: false },
+      posted_asc: { column: "posted_on", ascending: true, nullsFirst: true },
+      company_asc: { column: "company_name", ascending: true },
+      company_desc: { column: "company_name", ascending: false },
+    };
+    const { column, ascending, nullsFirst } = sortMap[sort];
+
     let q = supabase
       .from("warning_letters")
       .select("*", { count: "exact" })
       .eq("letter_kind", kind)
-      .order("posted_on", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
+      .order(column, ascending ? { ascending: true, nullsFirst: nullsFirst ?? false } : { ascending: false, nullsFirst: nullsFirst ?? false })
       .range(offset, offset + limit - 1);
+    // Stable tie-breaker for date sorts
+    if (column === "posted_on") {
+      q = q.order("created_at", { ascending: false });
+    }
     if (data.from) q = q.gte("posted_on", data.from);
     if (data.to) q = q.lte("posted_on", data.to);
     if (data.search) {
