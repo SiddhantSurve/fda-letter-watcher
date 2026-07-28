@@ -229,6 +229,23 @@ function Dashboard() {
               <h2 className="text-lg font-semibold">Archive</h2>
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-1.5">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">Sort</label>
+                  <Select
+                    value={sort}
+                    onValueChange={(v) => { setSort(v as typeof sort); setPage(0); }}
+                  >
+                    <SelectTrigger className="h-9 w-[170px] text-xs">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="posted_desc">Date: newest first</SelectItem>
+                      <SelectItem value="posted_asc">Date: oldest first</SelectItem>
+                      <SelectItem value="company_asc">Company: A–Z</SelectItem>
+                      <SelectItem value="company_desc">Company: Z–A</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-1.5">
                   <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
                   <Input
                     type="date"
