@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiLetterPdfIdRouteImport } from './routes/api/letter-pdf.$id'
 import { Route as AuthenticatedChatThreadIdRouteImport } from './routes/_authenticated/chat/$threadId'
 import { Route as ApiPublicHooksScrapeFdaRouteImport } from './routes/api/public/hooks/scrape-fda'
 import { Route as ApiPublicHooksProcessPendingRouteImport } from './routes/api/public/hooks/process-pending'
@@ -34,6 +35,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLetterPdfIdRoute = ApiLetterPdfIdRouteImport.update({
+  id: '/api/letter-pdf/$id',
+  path: '/api/letter-pdf/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedChatThreadIdRoute =
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
   '/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
+  '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
 }
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/': typeof AuthenticatedIndexRoute
   '/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
+  '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
 }
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
+  '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
 }
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/chat'
     | '/chat/$threadId'
+    | '/api/letter-pdf/$id'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
   fileRoutesByTo: FileRoutesByTo
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/'
     | '/chat/$threadId'
+    | '/api/letter-pdf/$id'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
   id:
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/_authenticated/'
     | '/_authenticated/chat/$threadId'
+    | '/api/letter-pdf/$id'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
   fileRoutesById: FileRoutesById
@@ -112,6 +124,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiLetterPdfIdRoute: typeof ApiLetterPdfIdRoute
   ApiPublicHooksProcessPendingRoute: typeof ApiPublicHooksProcessPendingRoute
   ApiPublicHooksScrapeFdaRoute: typeof ApiPublicHooksScrapeFdaRoute
 }
@@ -144,6 +157,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/letter-pdf/$id': {
+      id: '/api/letter-pdf/$id'
+      path: '/api/letter-pdf/$id'
+      fullPath: '/api/letter-pdf/$id'
+      preLoaderRoute: typeof ApiLetterPdfIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/chat/$threadId': {
@@ -187,6 +207,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiLetterPdfIdRoute: ApiLetterPdfIdRoute,
   ApiPublicHooksProcessPendingRoute: ApiPublicHooksProcessPendingRoute,
   ApiPublicHooksScrapeFdaRoute: ApiPublicHooksScrapeFdaRoute,
 }
