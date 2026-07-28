@@ -181,6 +181,21 @@ export const refreshUntitledCatalog = createServerFn({ method: "POST" }).handler
       .upsert(chunk as never, { onConflict: "letter_url", ignoreDuplicates: true });
     if (error) throw error;
   }
+  if (toInsert.length > 0) {
+    try {
+      const { data: newRows } = await supabaseAdmin
+        .from("warning_letters")
+        .select("id, company_name, subject, posted_date, issuing_office, excerpt, letter_url")
+        .eq("letter_kind", "untitled")
+        .in("letter_url", toInsert.map((r) => r.letter_url));
+      if (newRows && newRows.length > 0) {
+        const { notifyNewLetters } = await import("@/lib/notify-new-letters.server");
+        await notifyNewLetters("untitled", newRows as never);
+      }
+    } catch (e) {
+      console.error("notifyNewLetters (untitled) failed", e);
+    }
+  }
   let urlUpdates = 0;
   for (const r of rows) {
     const ex = existingMap.get(r.letter_url);
