@@ -376,12 +376,25 @@ function LetterCard({ letter: l }: { letter: Letter }) {
                     </a>
                   )}
                   {l.closeout_url && (
-                    <a href={l.closeout_url} target="_blank" rel="noopener noreferrer">
-                      <Badge variant="secondary" className="cursor-pointer hover:bg-accent">
-                        <ExternalLink className="mr-1 h-3 w-3" /> Close-out letter
-                      </Badge>
-                    </a>
+                    <div className="inline-flex items-center gap-1">
+                      <a href={l.closeout_url} target="_blank" rel="noopener noreferrer">
+                        <Badge variant="secondary" className="cursor-pointer hover:bg-accent">
+                          <ExternalLink className="mr-1 h-3 w-3" /> Close-out letter
+                        </Badge>
+                      </a>
+                      <a
+                        href={l.closeout_url}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Download close-out letter"
+                        className="inline-flex items-center rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground"
+                      >
+                        <Download className="h-3 w-3" />
+                      </a>
+                    </div>
                   )}
+
                 </div>
               </>
             );
