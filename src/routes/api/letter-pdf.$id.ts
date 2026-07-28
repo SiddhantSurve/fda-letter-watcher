@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+
 
 export const Route = createFileRoute("/api/letter-pdf/$id")({
   server: {
