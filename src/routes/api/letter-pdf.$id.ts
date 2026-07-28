@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+
 
 export const Route = createFileRoute("/api/letter-pdf/$id")({
   server: {
     handlers: {
       GET: async ({ params }) => {
+        const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
+
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: letter, error } = await supabaseAdmin
           .from("warning_letters")
