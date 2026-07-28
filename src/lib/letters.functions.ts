@@ -120,6 +120,21 @@ export const refreshCatalog = createServerFn({ method: "POST" }).handler(async (
     const { error } = await supabaseAdmin.from("warning_letters").upsert(chunk as never, { onConflict: "letter_url", ignoreDuplicates: true });
     if (error) throw error;
   }
+  // Notify subscribers about newly-added warning letters
+  if (toInsert.length > 0) {
+    try {
+      const { data: newRows } = await supabaseAdmin
+        .from("warning_letters")
+        .select("id, company_name, subject, posted_date, issuing_office, excerpt, letter_url")
+        .in("letter_url", toInsert.map((r) => r.letter_url));
+      if (newRows && newRows.length > 0) {
+        const { notifyNewLetters } = await import("@/lib/notify-new-letters.server");
+        await notifyNewLetters("warning", newRows as never);
+      }
+    } catch (e) {
+      console.error("notifyNewLetters (warning) failed", e);
+    }
+  }
   // Patch newly-added response/closeout URLs onto existing rows
   let urlUpdates = 0;
   for (const r of rows) {
