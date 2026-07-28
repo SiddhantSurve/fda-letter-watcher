@@ -87,10 +87,11 @@ function Dashboard() {
   const [page, setPage] = useState(0);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [sort, setSort] = useState<"posted_desc" | "posted_asc" | "company_asc" | "company_desc">("posted_desc");
 
   const lettersQ = useQuery({
-    queryKey: ["letters", kind, q, page, from, to],
-    queryFn: () => list({ data: { search: q, limit: PAGE_SIZE, offset: page * PAGE_SIZE, kind, from: from || undefined, to: to || undefined } }),
+    queryKey: ["letters", kind, q, page, from, to, sort],
+    queryFn: () => list({ data: { search: q, limit: PAGE_SIZE, offset: page * PAGE_SIZE, kind, from: from || undefined, to: to || undefined, sort } }),
     enabled: !!threadQ.data,
   });
   const statsQ = useQuery({
