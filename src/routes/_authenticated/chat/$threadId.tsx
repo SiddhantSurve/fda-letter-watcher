@@ -383,15 +383,13 @@ function LetterCard({ letter: l }: { letter: Letter }) {
                         </Badge>
                       </a>
                       <a
-                        href={l.closeout_url}
-                        download
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href={`/api/letter-file/${l.id}?kind=closeout`}
                         title="Download close-out letter"
                         className="inline-flex items-center rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground"
                       >
                         <Download className="h-3 w-3" />
                       </a>
+
                     </div>
                   )}
 
