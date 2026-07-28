@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiLetterPdfIdRouteImport } from './routes/api/letter-pdf.$id'
+import { Route as ApiLetterFileIdRouteImport } from './routes/api/letter-file.$id'
 import { Route as AuthenticatedChatThreadIdRouteImport } from './routes/_authenticated/chat/$threadId'
 import { Route as ApiPublicHooksScrapeFdaRouteImport } from './routes/api/public/hooks/scrape-fda'
 import { Route as ApiPublicHooksProcessPendingRouteImport } from './routes/api/public/hooks/process-pending'
@@ -42,6 +43,11 @@ const ApiLetterPdfIdRoute = ApiLetterPdfIdRouteImport.update({
   path: '/api/letter-pdf/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiLetterFileIdRoute = ApiLetterFileIdRouteImport.update({
+  id: '/api/letter-file/$id',
+  path: '/api/letter-file/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedChatThreadIdRoute =
   AuthenticatedChatThreadIdRouteImport.update({
     id: '/chat/$threadId',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
   '/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
+  '/api/letter-file/$id': typeof ApiLetterFileIdRoute
   '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/': typeof AuthenticatedIndexRoute
   '/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
+  '/api/letter-file/$id': typeof ApiLetterFileIdRoute
   '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
+  '/api/letter-file/$id': typeof ApiLetterFileIdRoute
   '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/chat'
     | '/chat/$threadId'
+    | '/api/letter-file/$id'
     | '/api/letter-pdf/$id'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/'
     | '/chat/$threadId'
+    | '/api/letter-file/$id'
     | '/api/letter-pdf/$id'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/_authenticated/'
     | '/_authenticated/chat/$threadId'
+    | '/api/letter-file/$id'
     | '/api/letter-pdf/$id'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
@@ -124,6 +136,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiLetterFileIdRoute: typeof ApiLetterFileIdRoute
   ApiLetterPdfIdRoute: typeof ApiLetterPdfIdRoute
   ApiPublicHooksProcessPendingRoute: typeof ApiPublicHooksProcessPendingRoute
   ApiPublicHooksScrapeFdaRoute: typeof ApiPublicHooksScrapeFdaRoute
@@ -164,6 +177,13 @@ declare module '@tanstack/react-router' {
       path: '/api/letter-pdf/$id'
       fullPath: '/api/letter-pdf/$id'
       preLoaderRoute: typeof ApiLetterPdfIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/letter-file/$id': {
+      id: '/api/letter-file/$id'
+      path: '/api/letter-file/$id'
+      fullPath: '/api/letter-file/$id'
+      preLoaderRoute: typeof ApiLetterFileIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/chat/$threadId': {
@@ -207,6 +227,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiLetterFileIdRoute: ApiLetterFileIdRoute,
   ApiLetterPdfIdRoute: ApiLetterPdfIdRoute,
   ApiPublicHooksProcessPendingRoute: ApiPublicHooksProcessPendingRoute,
   ApiPublicHooksScrapeFdaRoute: ApiPublicHooksScrapeFdaRoute,
