@@ -47,7 +47,7 @@ import {
 import { LetterChatDialog } from "@/components/letter-chat-dialog";
 import { summarizeLetter } from "@/lib/letter-summary.functions";
 import ReactMarkdown from "react-markdown";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Download } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -405,6 +405,12 @@ function LetterCard({ letter: l }: { letter: Letter }) {
             )}
             {summaryMut.data ? "Regenerate" : "Summarize"}
           </Button>
+          <a href={`/api/letter-pdf/${l.id}`} target="_blank" rel="noopener noreferrer">
+            <Button size="sm" variant="outline" asChild={false}>
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Download PDF
+            </Button>
+          </a>
+
           <a
             href={l.letter_url}
             target="_blank"
