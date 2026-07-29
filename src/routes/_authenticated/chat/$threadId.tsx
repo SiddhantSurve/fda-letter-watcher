@@ -407,6 +407,7 @@ function LetterCard({ letter: l }: { letter: Letter }) {
           <Button
             size="sm"
             variant="outline"
+            className="rounded-full glass border-0"
             disabled={summaryMut.isPending}
             onClick={() => summaryMut.mutate()}
           >
