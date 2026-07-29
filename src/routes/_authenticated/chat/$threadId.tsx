@@ -141,19 +141,19 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <Toaster />
-      <div className="bg-primary text-primary-foreground text-center text-xs px-4 py-2 font-medium">
+      <div className="glass-bar text-center text-xs px-4 py-2 font-medium text-primary">
         This is a vibe-coding product built by Sid — not formalized and currently in testing.
       </div>
-      <header className="border-b border-t-4 border-t-primary">
+      <header className="sticky top-0 z-30 glass-bar">
         <div className="mx-auto max-w-7xl px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">FDA {kindLabel} Tracker</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">FDA {kindLabel} Tracker</h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
               </span>
               <p className="text-xs text-muted-foreground">
                 Actively reading through {statsQ.data?.total.toLocaleString() ?? "—"} {isUntitled ? "untitled" : "warning"} letters...
@@ -161,14 +161,14 @@ function Dashboard() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/" })}>
+            <Button variant="ghost" size="sm" className="rounded-full" onClick={() => navigate({ to: "/" })}>
               Switch archive
             </Button>
-            <Button variant="outline" size="sm" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
+            <Button variant="outline" size="sm" className="rounded-full glass border-0" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
               <RefreshCw className={`mr-2 h-3.5 w-3.5 ${refreshMut.isPending ? "animate-spin" : ""}`} />
               Refresh catalog
             </Button>
-            <Button variant="ghost" size="sm" onClick={signOut}>
+            <Button variant="ghost" size="sm" className="rounded-full" onClick={signOut}>
               <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
             </Button>
           </div>
@@ -177,12 +177,13 @@ function Dashboard() {
 
       <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
         {/* Explanatory Header */}
-        <div className="bg-card border rounded-lg p-5">
+        <div className="glass rounded-3xl p-5">
           <h2 className="text-sm font-semibold mb-1">About this tracker</h2>
           <p className="text-xs text-muted-foreground leading-relaxed">
             This workspace monitors FDA {isUntitled ? "untitled" : "warning"} letters in real-time. Use the chat interface to query trends, common violations, and specific compliance themes across the entire database, or use the <strong>"Ask me"</strong> feature next to individual letters to chat directly with that specific document.
           </p>
         </div>
+
 
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
           {/* Thread sidebar */}
