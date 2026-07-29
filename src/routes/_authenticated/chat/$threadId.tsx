@@ -187,16 +187,16 @@ function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
           {/* Thread sidebar */}
-          <aside className="space-y-2">
-            <Button onClick={newThread} className="w-full" size="sm">
+          <aside className="space-y-2 lg:sticky lg:top-28 lg:self-start">
+            <Button onClick={newThread} className="w-full rounded-full" size="sm">
             <Plus className="mr-2 h-4 w-4" /> New chat
           </Button>
-          <div className="space-y-1">
+          <div className="space-y-1 glass rounded-3xl p-2">
             {(threadsQ.data ?? []).map((t) => (
               <div
                 key={t.id}
-                className={`group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm cursor-pointer ${
-                  t.id === threadId ? "bg-accent" : "hover:bg-accent/50"
+                className={`group flex items-center gap-1 rounded-2xl px-2.5 py-2 text-sm cursor-pointer transition-colors ${
+                  t.id === threadId ? "glass-strong" : "hover:bg-white/40"
                 }`}
                 onClick={() => navigate({ to: "/chat/$threadId", params: { threadId: t.id } })}
               >
