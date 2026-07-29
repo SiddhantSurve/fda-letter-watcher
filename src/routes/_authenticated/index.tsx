@@ -44,18 +44,19 @@ function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="bg-primary text-primary-foreground text-center text-xs px-4 py-2 font-medium">
+    <div className="min-h-screen flex flex-col">
+      <div className="glass-bar text-center text-xs px-4 py-2 font-medium text-primary">
         This is a vibe-coding product built by Sid — not formalized and currently in testing.
       </div>
-      <header className="border-b border-t-4 border-t-primary">
+      <header className="sticky top-0 z-30 glass-bar">
         <div className="mx-auto max-w-5xl px-6 py-5 flex items-center justify-between">
-          <h1 className="text-xl font-bold tracking-tight">FDA Letter Tracker</h1>
-          <Button variant="ghost" size="sm" onClick={signOut}>
+          <h1 className="text-xl font-semibold tracking-tight">FDA Letter Tracker</h1>
+          <Button variant="ghost" size="sm" className="rounded-full" onClick={signOut}>
             <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
           </Button>
         </div>
       </header>
+
 
       <main className="flex-1 mx-auto w-full max-w-5xl px-6 py-16">
         <div className="text-center mb-10">
