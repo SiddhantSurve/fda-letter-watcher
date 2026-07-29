@@ -105,16 +105,17 @@ function ChoiceCard({
   loading: boolean;
 }) {
   return (
-    <Card className="p-6 flex flex-col gap-4">
-      <div className="h-12 w-12 rounded-md bg-accent flex items-center justify-center">{icon}</div>
+    <Card className="glass glass-hover border-0 p-6 flex flex-col gap-4 rounded-3xl bg-transparent shadow-none">
+      <div className="h-12 w-12 rounded-2xl glass-strong flex items-center justify-center">{icon}</div>
       <div>
         <h3 className="text-lg font-semibold">{title}</h3>
         <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{description}</p>
       </div>
-      <Button className="mt-auto self-start" onClick={onClick} disabled={loading}>
+      <Button className="mt-auto self-start rounded-full" onClick={onClick} disabled={loading}>
         {loading ? "Loading…" : cta}
         <ArrowRight className="ml-2 h-4 w-4" />
       </Button>
     </Card>
   );
+
 }
