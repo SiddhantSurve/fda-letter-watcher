@@ -141,19 +141,19 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <Toaster />
-      <div className="bg-primary text-primary-foreground text-center text-xs px-4 py-2 font-medium">
+      <div className="glass-bar text-center text-xs px-4 py-2 font-medium text-primary">
         This is a vibe-coding product built by Sid — not formalized and currently in testing.
       </div>
-      <header className="border-b border-t-4 border-t-primary">
+      <header className="sticky top-0 z-30 glass-bar">
         <div className="mx-auto max-w-7xl px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">FDA {kindLabel} Tracker</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">FDA {kindLabel} Tracker</h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
               </span>
               <p className="text-xs text-muted-foreground">
                 Actively reading through {statsQ.data?.total.toLocaleString() ?? "—"} {isUntitled ? "untitled" : "warning"} letters...
@@ -161,14 +161,14 @@ function Dashboard() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/" })}>
+            <Button variant="ghost" size="sm" className="rounded-full" onClick={() => navigate({ to: "/" })}>
               Switch archive
             </Button>
-            <Button variant="outline" size="sm" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
+            <Button variant="outline" size="sm" className="rounded-full glass border-0" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
               <RefreshCw className={`mr-2 h-3.5 w-3.5 ${refreshMut.isPending ? "animate-spin" : ""}`} />
               Refresh catalog
             </Button>
-            <Button variant="ghost" size="sm" onClick={signOut}>
+            <Button variant="ghost" size="sm" className="rounded-full" onClick={signOut}>
               <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
             </Button>
           </div>
@@ -177,25 +177,26 @@ function Dashboard() {
 
       <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
         {/* Explanatory Header */}
-        <div className="bg-card border rounded-lg p-5">
+        <div className="glass rounded-3xl p-5">
           <h2 className="text-sm font-semibold mb-1">About this tracker</h2>
           <p className="text-xs text-muted-foreground leading-relaxed">
             This workspace monitors FDA {isUntitled ? "untitled" : "warning"} letters in real-time. Use the chat interface to query trends, common violations, and specific compliance themes across the entire database, or use the <strong>"Ask me"</strong> feature next to individual letters to chat directly with that specific document.
           </p>
         </div>
 
+
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
           {/* Thread sidebar */}
-          <aside className="space-y-2">
-            <Button onClick={newThread} className="w-full" size="sm">
+          <aside className="space-y-2 lg:sticky lg:top-28 lg:self-start">
+            <Button onClick={newThread} className="w-full rounded-full" size="sm">
             <Plus className="mr-2 h-4 w-4" /> New chat
           </Button>
-          <div className="space-y-1">
+          <div className="space-y-1 glass rounded-3xl p-2">
             {(threadsQ.data ?? []).map((t) => (
               <div
                 key={t.id}
-                className={`group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm cursor-pointer ${
-                  t.id === threadId ? "bg-accent" : "hover:bg-accent/50"
+                className={`group flex items-center gap-1 rounded-2xl px-2.5 py-2 text-sm cursor-pointer transition-colors ${
+                  t.id === threadId ? "glass-strong" : "hover:bg-white/40"
                 }`}
                 onClick={() => navigate({ to: "/chat/$threadId", params: { threadId: t.id } })}
               >
@@ -234,7 +235,7 @@ function Dashboard() {
                     value={sort}
                     onValueChange={(v) => { setSort(v as typeof sort); setPage(0); }}
                   >
-                    <SelectTrigger className="h-9 w-[170px] text-xs">
+                    <SelectTrigger className="h-9 w-[170px] text-xs rounded-full glass border-0">
                       <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
                     <SelectContent>
@@ -251,7 +252,7 @@ function Dashboard() {
                     type="date"
                     value={from}
                     onChange={(e) => { setFrom(e.target.value); setPage(0); }}
-                    className="h-9 w-[150px]"
+                    className="h-9 w-[150px] rounded-full glass border-0"
                   />
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -260,7 +261,7 @@ function Dashboard() {
                     type="date"
                     value={to}
                     onChange={(e) => { setTo(e.target.value); setPage(0); }}
-                    className="h-9 w-[150px]"
+                    className="h-9 w-[150px] rounded-full glass border-0"
                   />
                 </div>
                 {(from || to) && (
@@ -278,7 +279,7 @@ function Dashboard() {
                     placeholder="Search company, subject, office…"
                     value={q}
                     onChange={(e) => { setQ(e.target.value); setPage(0); }}
-                    className="pl-9"
+                    className="pl-9 rounded-full glass border-0"
                   />
                 </div>
               </div>
@@ -287,7 +288,7 @@ function Dashboard() {
             {lettersQ.isLoading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : (lettersQ.data?.letters.length ?? 0) === 0 ? (
-              <Card className="p-10 text-center">
+              <Card className="glass rounded-3xl border-0 bg-transparent shadow-none p-10 text-center">
                 <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
                 <p className="mt-3 text-sm text-muted-foreground">No letters yet — click Refresh catalog.</p>
               </Card>
@@ -333,7 +334,7 @@ function LetterCard({ letter: l }: { letter: Letter }) {
       toast.error(e instanceof Error ? e.message : "Could not generate summary"),
   });
   return (
-    <Card className="p-5">
+    <Card className="glass glass-hover rounded-3xl border-0 bg-transparent shadow-none p-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -356,21 +357,21 @@ function LetterCard({ letter: l }: { letter: Letter }) {
                   </p>
                 )}
                 {summaryMut.data && (
-                  <div className="mt-3 rounded-md border border-primary/20 bg-accent/40 p-3 text-sm prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1">
+                  <div className="mt-3 rounded-2xl glass-strong p-3 text-sm prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1">
                     <ReactMarkdown>{summaryMut.data.summary}</ReactMarkdown>
                   </div>
                 )}
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {promoUrl && (
                     <a href={promoUrl} target="_blank" rel="noopener noreferrer">
-                      <Badge variant="secondary" className="cursor-pointer hover:bg-accent">
+                      <Badge variant="secondary" className="cursor-pointer rounded-full glass border-0 hover:bg-white/60">
                         <ExternalLink className="mr-1 h-3 w-3" /> Promotional material
                       </Badge>
                     </a>
                   )}
                   {l.response_url && (
                     <a href={l.response_url} target="_blank" rel="noopener noreferrer">
-                      <Badge variant="secondary" className="cursor-pointer hover:bg-accent">
+                      <Badge variant="secondary" className="cursor-pointer rounded-full glass border-0 hover:bg-white/60">
                         <ExternalLink className="mr-1 h-3 w-3" /> Response letter
                       </Badge>
                     </a>
@@ -378,7 +379,7 @@ function LetterCard({ letter: l }: { letter: Letter }) {
                   {l.closeout_url && (
                     <div className="inline-flex items-center gap-1">
                       <a href={l.closeout_url} target="_blank" rel="noopener noreferrer">
-                        <Badge variant="secondary" className="cursor-pointer hover:bg-accent">
+                        <Badge variant="secondary" className="cursor-pointer rounded-full glass border-0 hover:bg-white/60">
                           <ExternalLink className="mr-1 h-3 w-3" /> Close-out letter
                         </Badge>
                       </a>
@@ -400,12 +401,13 @@ function LetterCard({ letter: l }: { letter: Letter }) {
 
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
-          <Button size="sm" variant="outline" onClick={() => setChatOpen(true)}>
+          <Button size="sm" variant="outline" className="rounded-full glass border-0" onClick={() => setChatOpen(true)}>
             <MessageCircle className="mr-1.5 h-3.5 w-3.5" /> Ask me
           </Button>
           <Button
             size="sm"
             variant="outline"
+            className="rounded-full glass border-0"
             disabled={summaryMut.isPending}
             onClick={() => summaryMut.mutate()}
           >
@@ -417,7 +419,7 @@ function LetterCard({ letter: l }: { letter: Letter }) {
             {summaryMut.data ? "Regenerate" : "Summarize"}
           </Button>
           <a href={`/api/letter-pdf/${l.id}`} target="_blank" rel="noopener noreferrer">
-            <Button size="sm" variant="outline" asChild={false}>
+            <Button size="sm" variant="outline" className="rounded-full glass border-0" asChild={false}>
               <Download className="mr-1.5 h-3.5 w-3.5" /> Download PDF
             </Button>
           </a>
@@ -450,8 +452,8 @@ function Pager({ page, setPage, total }: { page: number; setPage: (n: number) =>
     <div className="mt-6 flex items-center justify-between text-sm">
       <span className="text-muted-foreground">{total.toLocaleString()} letters · page {page + 1} of {pageCount}</span>
       <div className="flex gap-2">
-        <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button>
-        <Button size="sm" variant="outline" disabled={page + 1 >= pageCount} onClick={() => setPage(page + 1)}>Next</Button>
+        <Button size="sm" variant="outline" className="rounded-full glass border-0" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button>
+        <Button size="sm" variant="outline" className="rounded-full glass border-0" disabled={page + 1 >= pageCount} onClick={() => setPage(page + 1)}>Next</Button>
       </div>
     </div>
   );
@@ -512,8 +514,8 @@ function ChatPanel({
   };
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="border-b px-5 py-3">
+    <Card className="glass rounded-3xl border-0 bg-transparent shadow-none p-0 overflow-hidden">
+      <div className="border-b border-white/50 px-5 py-3">
         <h2 className="text-base font-semibold">Ask the archive</h2>
         <p className="text-xs text-muted-foreground">
           Ask anything about FDA {kind === "untitled" ? "untitled" : "warning"} letters — answers cite specific letters from the archive.
@@ -545,7 +547,7 @@ function ChatPanel({
               <div
                 className={
                   m.role === "user"
-                    ? "max-w-[80%] rounded-lg bg-primary text-primary-foreground px-3 py-2 text-sm whitespace-pre-wrap"
+                    ? "max-w-[80%] rounded-2xl bg-primary text-primary-foreground px-3 py-2 text-sm whitespace-pre-wrap"
                     : "max-w-full text-sm leading-relaxed whitespace-pre-wrap"
                 }
               >
@@ -558,7 +560,7 @@ function ChatPanel({
           <p className="text-sm text-muted-foreground animate-pulse">Thinking…</p>
         )}
       </div>
-      <form onSubmit={submit} className="border-t p-3 flex items-end gap-2">
+      <form onSubmit={submit} className="border-t border-white/50 p-3 flex items-end gap-2">
         <Textarea
           ref={taRef}
           rows={1}
@@ -571,9 +573,9 @@ function ChatPanel({
               submit(e as unknown as React.FormEvent);
             }
           }}
-          className="resize-none min-h-[40px] max-h-[160px]"
+          className="resize-none min-h-[40px] max-h-[160px] rounded-2xl glass border-0"
         />
-        <Button type="submit" size="icon" disabled={!input.trim() || status === "submitted" || status === "streaming"}>
+        <Button type="submit" size="icon" className="rounded-full" disabled={!input.trim() || status === "submitted" || status === "streaming"}>
           <Send className="h-4 w-4" />
         </Button>
       </form>
