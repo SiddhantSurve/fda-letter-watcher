@@ -71,7 +71,7 @@ function Home() {
             icon={<FileWarning className="h-7 w-7 text-primary" />}
             title="Warning Letters"
             description="The full FDA warning letter archive across all centers and offices. Chat with the corpus or any individual letter."
-            cta="Enter Warning Letters"
+            cta="View Warning Letter"
             onClick={() => enter("warning")}
             loading={loading === "warning"}
           />
