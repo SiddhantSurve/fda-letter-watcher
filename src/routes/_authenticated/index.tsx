@@ -71,7 +71,7 @@ function Home() {
             icon={<FileWarning className="h-7 w-7 text-primary" />}
             title="Warning Letters"
             description="The full FDA warning letter archive across all centers and offices. Chat with the corpus or any individual letter."
-            cta="View Warning Letter"
+            cta="View Warning Letters"
             onClick={() => enter("warning")}
             loading={loading === "warning"}
           />
@@ -79,7 +79,7 @@ function Home() {
             icon={<AlertTriangle className="h-7 w-7 text-primary" />}
             title="Untitled Letters"
             description="OPDP untitled letters covering pharmaceutical promotional communications and related materials."
-            cta="Enter Untitled Letters"
+            cta="View Untitled Letters"
             onClick={() => enter("untitled")}
             loading={loading === "untitled"}
           />
