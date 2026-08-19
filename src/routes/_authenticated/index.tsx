@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { listThreads, createThread } from "@/lib/chat.functions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/proxy-client";
 import { AlertTriangle, FileWarning, LogOut, ArrowRight } from "lucide-react";
 import { useState } from "react";
 
