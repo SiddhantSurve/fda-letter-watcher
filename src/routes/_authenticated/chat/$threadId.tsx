@@ -43,6 +43,7 @@ import {
   LogOut,
   MessageSquare,
   MessageCircle,
+  Repeat2,
 } from "lucide-react";
 import { LetterChatDialog } from "@/components/letter-chat-dialog";
 import { summarizeLetter } from "@/lib/letter-summary.functions";
@@ -56,6 +57,10 @@ export const Route = createFileRoute("/_authenticated/chat/$threadId")({
     meta: [
       { title: "FDA Letter Tracker" },
       { name: "description", content: "Chat with FDA warning and untitled letters." },
+      { property: "og:title", content: "FDA Letter Tracker" },
+      { property: "og:description", content: "Chat with FDA warning and untitled letters." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Dashboard,
@@ -88,6 +93,7 @@ function Dashboard() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [sort, setSort] = useState<"posted_desc" | "posted_asc" | "company_asc" | "company_desc">("posted_desc");
+  const [switchingArchive, setSwitchingArchive] = useState(false);
 
   const lettersQ = useQuery({
     queryKey: ["letters", kind, q, page, from, to, sort],
@@ -130,6 +136,20 @@ function Dashboard() {
     navigate({ to: "/chat/$threadId", params: { threadId: id } });
   };
 
+  const switchArchive = async () => {
+    const targetKind = isUntitled ? "warning" : "untitled";
+    setSwitchingArchive(true);
+    try {
+      const threads = await listThreadsFn({ data: { kind: targetKind } });
+      const targetId = threads[0]?.id ?? (await createThreadFn({ data: { kind: targetKind } })).id;
+      await navigate({ to: "/chat/$threadId", params: { threadId: targetId } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to switch archives.");
+    } finally {
+      setSwitchingArchive(false);
+    }
+  };
+
   const removeThread = async (id: string) => {
     await deleteThreadFn({ data: { id } });
     const remaining = (threadsQ.data ?? []).filter((t) => t.id !== id);
@@ -161,8 +181,16 @@ function Dashboard() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" className="rounded-full" onClick={() => navigate({ to: "/" })}>
-              Switch archive
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              onClick={switchArchive}
+              disabled={switchingArchive}
+              title={`Switch to ${isUntitled ? "Warning Letters" : "Untitled Letters"}`}
+              aria-label={`Switch to ${isUntitled ? "Warning Letters" : "Untitled Letters"}`}
+            >
+              {switchingArchive ? <Loader2 className="h-4 w-4 animate-spin" /> : <Repeat2 className="h-4 w-4" />}
             </Button>
             <Button variant="outline" size="sm" className="rounded-full glass border-0" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
               <RefreshCw className={`mr-2 h-3.5 w-3.5 ${refreshMut.isPending ? "animate-spin" : ""}`} />
