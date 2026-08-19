@@ -23,6 +23,9 @@ function verifyCronAuth(request: Request): Response | null {
 // JSON datatables endpoint and upserts metadata. Files are downloaded
 // separately by /api/public/hooks/process-pending in batches.
 async function handler({ request }: { request: Request }) {
+  const authErr = verifyCronAuth(request);
+  if (authErr) return authErr;
+
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rows = await fetchAllListings();
