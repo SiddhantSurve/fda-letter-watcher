@@ -99,9 +99,9 @@ function Dashboard() {
     queryFn: () => stats({ data: { kind } }),
     enabled: !!threadQ.data,
   });
-  const threadsQ = useQuery({
+  const threadsQ = useQuery<Array<{ id: string; title: string | null }>>({
     queryKey: ["threads", kind],
-    queryFn: () => listThreadsFn({ data: { kind } }),
+    queryFn: () => listThreadsFn({ data: { kind } }) as never,
     enabled: !!threadQ.data,
   });
   const initialMsgsQ = useQuery({

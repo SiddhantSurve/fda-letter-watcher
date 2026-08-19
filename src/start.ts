@@ -1,7 +1,9 @@
 import { createStart, createMiddleware } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
-import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
+// Project-specific attacher: routes session lookups through the same-origin
+// /api/sb proxy instead of the direct backend host (corporate firewalls).
+import { attachSupabaseAuthProxy } from "@/lib/supabase-auth-attacher";
 
 const errorMiddleware = createMiddleware().server(async ({ request, next }) => {
   const url = new URL(request.url);
@@ -23,6 +25,6 @@ const errorMiddleware = createMiddleware().server(async ({ request, next }) => {
 });
 
 export const startInstance = createStart(() => ({
-  functionMiddleware: [attachSupabaseAuth],
+  functionMiddleware: [attachSupabaseAuthProxy],
   requestMiddleware: [errorMiddleware],
 }));
