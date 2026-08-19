@@ -21,6 +21,9 @@ function verifyCronAuth(request: Request): Response | null {
 }
 
 async function handler({ request }: { request: Request }) {
+  const authErr = verifyCronAuth(request);
+  if (authErr) return authErr;
+
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const url = new URL(request.url);
