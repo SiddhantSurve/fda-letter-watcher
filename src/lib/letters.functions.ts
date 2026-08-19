@@ -95,7 +95,9 @@ export const getDownloadUrl = createServerFn({ method: "POST" })
     return { url: signed.signedUrl };
   });
 
-export const refreshCatalog = createServerFn({ method: "POST" }).handler(async () => {
+export const refreshCatalog = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
   const { fetchAllListings } = await import("@/lib/fda-scraper.server");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const rows = await fetchAllListings();
@@ -152,7 +154,9 @@ export const refreshCatalog = createServerFn({ method: "POST" }).handler(async (
   return { total_listed: rows.length, new_rows: toInsert.length, url_updates: urlUpdates };
 });
 
-export const refreshUntitledCatalog = createServerFn({ method: "POST" }).handler(async () => {
+export const refreshUntitledCatalog = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
   const { fetchUntitledListings } = await import("@/lib/untitled-scraper.server");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const rows = await fetchUntitledListings();
@@ -213,6 +217,7 @@ export const refreshUntitledCatalog = createServerFn({ method: "POST" }).handler
 });
 
 export const processBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ limit: z.number().int().min(1).max(50).optional() }).parse(input ?? {}))
   .handler(async ({ data }) => {
     const { fetchBinary, slugifyFromUrl } = await import("@/lib/fda-scraper.server");
