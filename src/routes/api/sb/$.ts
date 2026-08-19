@@ -43,12 +43,22 @@ async function proxy({ request }: { request: Request }) {
   const method = request.method.toUpperCase();
   const body = method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer();
 
-  const upstream = await fetch(target.toString(), {
-    method,
-    headers,
-    body,
-    redirect: "manual",
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(target.toString(), {
+      method,
+      headers,
+      body,
+      redirect: "manual",
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (error) {
+    console.error("Backend proxy request failed", error);
+    return new Response(JSON.stringify({ error: "Backend temporarily unavailable" }), {
+      status: 502,
+      headers: { "content-type": "application/json" },
+    });
+  }
 
   const outHeaders = new Headers();
   upstream.headers.forEach((value, key) => {
