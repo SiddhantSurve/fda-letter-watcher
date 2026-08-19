@@ -182,16 +182,21 @@ function Dashboard() {
           </div>
           <div className="flex gap-2">
             <Button
-              variant="ghost"
-              size="icon"
+              variant="default"
+              size="sm"
               className="rounded-full"
               onClick={switchArchive}
               disabled={switchingArchive}
               title={`Switch to ${isUntitled ? "Warning Letters" : "Untitled Letters"}`}
-              aria-label={`Switch to ${isUntitled ? "Warning Letters" : "Untitled Letters"}`}
             >
-              {switchingArchive ? <Loader2 className="h-4 w-4 animate-spin" /> : <Repeat2 className="h-4 w-4" />}
+              {switchingArchive ? (
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Repeat2 className="mr-2 h-3.5 w-3.5" />
+              )}
+              {isUntitled ? "Switch to Warning Letters" : "Switch to Untitled Letters"}
             </Button>
+
             <Button variant="outline" size="sm" className="rounded-full glass border-0" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
               <RefreshCw className={`mr-2 h-3.5 w-3.5 ${refreshMut.isPending ? "animate-spin" : ""}`} />
               Refresh catalog
