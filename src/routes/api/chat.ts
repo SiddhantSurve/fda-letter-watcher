@@ -49,8 +49,9 @@ export const Route = createFileRoute("/api/chat")({
           if (body.threadId) {
             const { data: thread, error: threadError } = await supabase
               .from("chat_threads")
-              .select("letter_kind")
+              .select("letter_kind, user_id")
               .eq("id", body.threadId)
+              .eq("user_id", userId)
               .single();
             if (threadError || !thread) {
               return new Response("Thread not found or access denied", { status: 404 });
