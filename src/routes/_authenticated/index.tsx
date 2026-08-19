@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/proxy-client";
 import { AlertTriangle, FileWarning, LogOut, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -28,11 +30,14 @@ function Home() {
     try {
       const threads = await list({ data: { kind } });
       if (threads.length > 0) {
-        navigate({ to: "/chat/$threadId", params: { threadId: threads[0].id } });
+        await navigate({ to: "/chat/$threadId", params: { threadId: threads[0].id } });
       } else {
         const { id } = await create({ data: { kind } });
-        navigate({ to: "/chat/$threadId", params: { threadId: id } });
+        await navigate({ to: "/chat/$threadId", params: { threadId: id } });
       }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to open this archive.";
+      toast.error(message.includes("fetch") ? "The archive could not connect. Please try again." : message);
     } finally {
       setLoading(null);
     }
@@ -45,6 +50,7 @@ function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Toaster />
       <div className="glass-bar text-center text-xs px-4 py-2 font-medium text-primary">
         This is a vibe-coding product built by Sid — not formalized and currently in testing.
       </div>

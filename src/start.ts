@@ -13,8 +13,17 @@ const errorMiddleware = createMiddleware().server(async ({ request, next }) => {
   try {
     return await next();
   } catch (error) {
+    if (error instanceof Response) {
+      return error;
+    }
     if (error != null && typeof error === "object" && "statusCode" in error) {
       throw error;
+    }
+    if (error instanceof Error && error.message.startsWith("Unauthorized:")) {
+      return new Response("Unauthorized", {
+        status: 401,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
     }
     console.error(error);
     return new Response(renderErrorPage(), {
