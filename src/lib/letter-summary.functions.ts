@@ -13,6 +13,7 @@ function extractPromoUrl(excerpt: string | null): string | null {
 }
 
 export const summarizeLetter = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
