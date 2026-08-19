@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link, ClientOnly } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/proxy-client";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,9 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      <Toaster />
+      <ClientOnly fallback={null}>
+        <Toaster />
+      </ClientOnly>
       <Card className="glass w-full max-w-md rounded-3xl border-0 bg-transparent shadow-none p-8">
         <h1 className="text-2xl font-semibold tracking-tight">FDA Warning Letter Tracker</h1>
         <p className="mt-1 text-sm text-muted-foreground">
