@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { lovableGateway } from "@/lib/ai-gateway.server";
 
 const Input = z.object({ letterId: z.string().uuid() });
