@@ -43,15 +43,19 @@ export const Route = createFileRoute("/api/chat")({
 
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-          // Determine the letter_kind scope of this conversation
+          // Determine the letter_kind scope of this conversation and verify ownership
           let kind: "warning" | "untitled" = "warning";
           if (body.threadId) {
             const { data: thread } = await supabaseAdmin
               .from("chat_threads")
-              .select("letter_kind")
+              .select("letter_kind, user_id")
               .eq("id", body.threadId)
               .single();
-            if (thread?.letter_kind === "untitled") kind = "untitled";
+            if (!thread) return new Response("Thread not found", { status: 404 });
+            if (thread.user_id !== userId) {
+              return new Response("Forbidden: you do not own this thread", { status: 403 });
+            }
+            if (thread.letter_kind === "untitled") kind = "untitled";
           }
           const kindLabelPlural = kind === "untitled" ? "FDA untitled letters" : "FDA warning letters";
 
