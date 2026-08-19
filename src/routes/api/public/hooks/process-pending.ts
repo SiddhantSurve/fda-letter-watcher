@@ -11,7 +11,19 @@ export const Route = createFileRoute("/api/public/hooks/process-pending")({
   },
 });
 
+function verifyCronAuth(request: Request): Response | null {
+  const auth = request.headers.get("authorization");
+  const expected = `Bearer ${process.env.CRON_SECRET}`;
+  if (!auth || auth !== expected) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  return null;
+}
+
 async function handler({ request }: { request: Request }) {
+  const authErr = verifyCronAuth(request);
+  if (authErr) return authErr;
+
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const url = new URL(request.url);
