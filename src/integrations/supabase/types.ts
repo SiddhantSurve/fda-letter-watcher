@@ -163,6 +163,21 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_settings: {
+        Row: {
+          key: string
+          value: string
+        }
+        Insert: {
+          key: string
+          value: string
+        }
+        Update: {
+          key?: string
+          value?: string
+        }
+        Relationships: []
+      }
       letter_notifications_sent: {
         Row: {
           letter_id: string

@@ -46,12 +46,16 @@ export const Route = createFileRoute("/api/chat")({
           // Determine the letter_kind scope of this conversation
           let kind: "warning" | "untitled" = "warning";
           if (body.threadId) {
+            // Ownership check: the caller must own this thread.
             const { data: thread } = await supabaseAdmin
               .from("chat_threads")
-              .select("letter_kind")
+              .select("letter_kind, user_id")
               .eq("id", body.threadId)
               .single();
-            if (thread?.letter_kind === "untitled") kind = "untitled";
+            if (!thread || thread.user_id !== userId) {
+              return new Response("Forbidden", { status: 403 });
+            }
+            if (thread.letter_kind === "untitled") kind = "untitled";
           }
           const kindLabelPlural = kind === "untitled" ? "FDA untitled letters" : "FDA warning letters";
 

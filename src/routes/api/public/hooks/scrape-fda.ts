@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { fetchAllListings } from "@/lib/fda-scraper.server";
+import { assertCronAuthorized } from "@/lib/cron-auth.server";
 
 export const Route = createFileRoute("/api/public/hooks/scrape-fda")({
   server: {
@@ -13,7 +14,9 @@ export const Route = createFileRoute("/api/public/hooks/scrape-fda")({
 // Listing-only pass: fetches the full FDA catalog (~3,500+ rows) via the
 // JSON datatables endpoint and upserts metadata. Files are downloaded
 // separately by /api/public/hooks/process-pending in batches.
-async function handler() {
+async function handler({ request }: { request: Request }) {
+  const denied = await assertCronAuthorized(request);
+  if (denied) return denied;
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rows = await fetchAllListings();
