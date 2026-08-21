@@ -65,6 +65,22 @@ async function handler({ request }: { request: Request }) {
       if (error) throw error;
     }
 
+    // Notify subscribers about newly-added warning letters
+    if (toInsert.length > 0) {
+      try {
+        const { data: newRows } = await supabaseAdmin
+          .from("warning_letters")
+          .select("id, company_name, subject, posted_date, issuing_office, excerpt, letter_url")
+          .in("letter_url", toInsert.map((r) => r["letter_url"] as string));
+        if (newRows && newRows.length > 0) {
+          const { notifyNewLetters } = await import("@/lib/notify-new-letters.server");
+          await notifyNewLetters("warning", newRows as never);
+        }
+      } catch (e) {
+        console.error("notifyNewLetters (warning) failed", e);
+      }
+    }
+
     // Patch response/closeout url additions on existing rows
     for (const u of toUpdate) {
       await supabaseAdmin
@@ -73,11 +89,60 @@ async function handler({ request }: { request: Request }) {
         .eq("letter_url", u.letter_url);
     }
 
+    // ---- Untitled letters catalog ----
+    let untitledListed = 0;
+    let untitledNew = 0;
+    try {
+      const { fetchUntitledListings } = await import("@/lib/untitled-scraper.server");
+      const uRows = await fetchUntitledListings();
+      untitledListed = uRows.length;
+      const { data: uExisting } = await supabaseAdmin
+        .from("warning_letters")
+        .select("letter_url")
+        .eq("letter_kind", "untitled");
+      const uSeen = new Set((uExisting ?? []).map((r) => r.letter_url));
+      const uInsert = uRows
+        .filter((r) => !uSeen.has(r.letter_url))
+        .map((r) => ({
+          letter_url: r.letter_url,
+          posted_date: r.posted_date,
+          issue_date: r.issue_date,
+          company_name: r.company_name,
+          issuing_office: r.issuing_office,
+          subject: r.subject,
+          excerpt: r.excerpt,
+          response_url: r.response_url,
+          closeout_url: r.closeout_url,
+          letter_kind: "untitled",
+        }));
+      untitledNew = uInsert.length;
+      for (let i = 0; i < uInsert.length; i += 500) {
+        await supabaseAdmin
+          .from("warning_letters")
+          .upsert(uInsert.slice(i, i + 500) as never, { onConflict: "letter_url", ignoreDuplicates: true });
+      }
+      if (uInsert.length > 0) {
+        const { data: newRows } = await supabaseAdmin
+          .from("warning_letters")
+          .select("id, company_name, subject, posted_date, issuing_office, excerpt, letter_url")
+          .eq("letter_kind", "untitled")
+          .in("letter_url", uInsert.map((r) => r.letter_url));
+        if (newRows && newRows.length > 0) {
+          const { notifyNewLetters } = await import("@/lib/notify-new-letters.server");
+          await notifyNewLetters("untitled", newRows as never);
+        }
+      }
+    } catch (e) {
+      console.error("untitled scrape/notify failed", e);
+    }
+
     return Response.json({
       ok: true,
       total_listed: rows.length,
       new_rows: toInsert.length,
       url_updates: toUpdate.length,
+      untitled_listed: untitledListed,
+      untitled_new: untitledNew,
     });
   } catch (e) {
     const err = e as Error;

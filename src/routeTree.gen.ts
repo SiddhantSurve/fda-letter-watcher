@@ -19,6 +19,7 @@ import { Route as AuthenticatedChatThreadIdRouteImport } from './routes/_authent
 import { Route as ApiLetterFileIdRouteImport } from './routes/api/letter-file.$id'
 import { Route as ApiLetterPdfIdRouteImport } from './routes/api/letter-pdf.$id'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as ApiPublicHooksProcessEmailsRouteImport } from './routes/api/public/hooks/process-emails'
 import { Route as ApiPublicHooksProcessPendingRouteImport } from './routes/api/public/hooks/process-pending'
 import { Route as ApiPublicHooksScrapeFdaRouteImport } from './routes/api/public/hooks/scrape-fda'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -77,6 +78,12 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksProcessEmailsRoute =
+  ApiPublicHooksProcessEmailsRouteImport.update({
+    id: '/api/public/hooks/process-emails',
+    path: '/api/public/hooks/process-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessPendingRoute =
   ApiPublicHooksProcessPendingRouteImport.update({
     id: '/api/public/hooks/process-pending',
@@ -127,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/api/letter-file/$id': typeof ApiLetterFileIdRoute
   '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/hooks/process-emails': typeof ApiPublicHooksProcessEmailsRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -145,6 +153,7 @@ export interface FileRoutesByTo {
   '/api/letter-file/$id': typeof ApiLetterFileIdRoute
   '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/hooks/process-emails': typeof ApiPublicHooksProcessEmailsRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -165,6 +174,7 @@ export interface FileRoutesById {
   '/api/letter-file/$id': typeof ApiLetterFileIdRoute
   '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/hooks/process-emails': typeof ApiPublicHooksProcessEmailsRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/api/letter-file/$id'
     | '/api/letter-pdf/$id'
     | '/lovable/email/suppression'
+    | '/api/public/hooks/process-emails'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
     | '/lovable/email/auth/preview'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/api/letter-file/$id'
     | '/api/letter-pdf/$id'
     | '/lovable/email/suppression'
+    | '/api/public/hooks/process-emails'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
     | '/lovable/email/auth/preview'
@@ -222,6 +234,7 @@ export interface FileRouteTypes {
     | '/api/letter-file/$id'
     | '/api/letter-pdf/$id'
     | '/lovable/email/suppression'
+    | '/api/public/hooks/process-emails'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
     | '/lovable/email/auth/preview'
@@ -240,6 +253,7 @@ export interface RootRouteChildren {
   ApiLetterFileIdRoute: typeof ApiLetterFileIdRoute
   ApiLetterPdfIdRoute: typeof ApiLetterPdfIdRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiPublicHooksProcessEmailsRoute: typeof ApiPublicHooksProcessEmailsRoute
   ApiPublicHooksProcessPendingRoute: typeof ApiPublicHooksProcessPendingRoute
   ApiPublicHooksScrapeFdaRoute: typeof ApiPublicHooksScrapeFdaRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -321,6 +335,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-emails': {
+      id: '/api/public/hooks/process-emails'
+      path: '/api/public/hooks/process-emails'
+      fullPath: '/api/public/hooks/process-emails'
+      preLoaderRoute: typeof ApiPublicHooksProcessEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-pending': {
       id: '/api/public/hooks/process-pending'
       path: '/api/public/hooks/process-pending'
@@ -395,6 +416,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLetterFileIdRoute: ApiLetterFileIdRoute,
   ApiLetterPdfIdRoute: ApiLetterPdfIdRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiPublicHooksProcessEmailsRoute: ApiPublicHooksProcessEmailsRoute,
   ApiPublicHooksProcessPendingRoute: ApiPublicHooksProcessPendingRoute,
   ApiPublicHooksScrapeFdaRoute: ApiPublicHooksScrapeFdaRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
