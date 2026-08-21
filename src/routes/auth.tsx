@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate, Link, ClientOnly } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/proxy-client";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,23 +70,21 @@ function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <ClientOnly fallback={null}>
-        <Toaster />
-      </ClientOnly>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <Toaster />
       <Card className="w-full max-w-md p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">FDA Warning Letter Tracker</h1>
+        <h1 className="text-2xl font-bold tracking-tight">FDA Warning Letter Tracker</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {mode === "signin" ? "Sign in to chat with the archive." : "Create an account to get started."}
         </p>
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5" />
+            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1.5" />
+            <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           <Button type="submit" disabled={busy} className="w-full">
             {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}

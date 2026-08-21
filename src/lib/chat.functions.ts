@@ -77,8 +77,7 @@ export const getThreadMessages = createServerFn({ method: "POST" })
       .eq("thread_id", data.threadId)
       .order("created_at", { ascending: true });
     if (error) throw error;
-    type Row = { id: string; role: string; content: unknown; created_at: string };
-    return ((rows ?? []) as Row[]).map((r) => ({
+    return (rows ?? []).map((r) => ({
       id: r.id,
       role: r.role as "user" | "assistant",
       parts: (r.content as { parts?: unknown }).parts ?? [{ type: "text", text: String(r.content) }],

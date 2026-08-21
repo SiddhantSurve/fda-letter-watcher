@@ -1,62 +1,119 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2 } from "lucide-react";
-import { useEffect, useRef } from "react";
-import { createThread, listThreads } from "@/lib/chat.functions";
+import { listThreads, createThread } from "@/lib/chat.functions";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { AlertTriangle, FileWarning, LogOut, ArrowRight } from "lucide-react";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "Warning Letters — FDA Letter Tracker" },
-      {
-        name: "description",
-        content: "Search, summarize, and ask questions across FDA warning letters.",
-      },
-      { property: "og:title", content: "Warning Letters — FDA Letter Tracker" },
-      {
-        property: "og:description",
-        content: "Search, summarize, and ask questions across FDA warning letters.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { title: "FDA Letter Tracker" },
+      { name: "description", content: "Track FDA Warning Letters and Untitled Letters." },
     ],
   }),
-  component: WarningArchiveEntry,
+  component: Home,
 });
 
-function WarningArchiveEntry() {
+function Home() {
   const navigate = useNavigate();
   const list = useServerFn(listThreads);
   const create = useServerFn(createThread);
-  const started = useRef(false);
+  const [loading, setLoading] = useState<"warning" | "untitled" | null>(null);
 
-  useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-
-    const openWarningArchive = async () => {
-      try {
-        const threads = await list({ data: { kind: "warning" } });
-        const threadId = threads[0]?.id ?? (await create({ data: { kind: "warning" } })).id;
-        await navigate({
-          to: "/chat/$threadId",
-          params: { threadId },
-          replace: true,
-        });
-      } catch {
-        await navigate({ to: "/auth", replace: true });
+  const enter = async (kind: "warning" | "untitled") => {
+    setLoading(kind);
+    try {
+      const threads = await list({ data: { kind } });
+      if (threads.length > 0) {
+        navigate({ to: "/chat/$threadId", params: { threadId: threads[0].id } });
+      } else {
+        const { id } = await create({ data: { kind } });
+        navigate({ to: "/chat/$threadId", params: { threadId: id } });
       }
-    };
+    } finally {
+      setLoading(null);
+    }
+  };
 
-    void openWarningArchive();
-  }, [create, list, navigate]);
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/auth" });
+  };
 
   return (
-    <main className="flex min-h-screen items-center justify-center" aria-live="polite">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-        Opening Warning Letters…
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="bg-primary text-primary-foreground text-center text-xs px-4 py-2 font-medium">
+        This is a vibe-coding product built by Sid — not formalized and currently in testing.
       </div>
-    </main>
+      <header className="border-b border-t-4 border-t-primary">
+        <div className="mx-auto max-w-5xl px-6 py-5 flex items-center justify-between">
+          <h1 className="text-xl font-bold tracking-tight">FDA Letter Tracker</h1>
+          <Button variant="ghost" size="sm" onClick={signOut}>
+            <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
+          </Button>
+        </div>
+      </header>
+
+      <main className="flex-1 mx-auto w-full max-w-5xl px-6 py-16">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-bold tracking-tight">Choose an archive</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Pick which type of FDA correspondence you want to explore.
+          </p>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2">
+          <ChoiceCard
+            icon={<FileWarning className="h-7 w-7 text-primary" />}
+            title="Warning Letters"
+            description="The full FDA warning letter archive across all centers and offices. Chat with the corpus or any individual letter."
+            cta="Enter Warning Letters"
+            onClick={() => enter("warning")}
+            loading={loading === "warning"}
+          />
+          <ChoiceCard
+            icon={<AlertTriangle className="h-7 w-7 text-primary" />}
+            title="Untitled Letters"
+            description="OPDP untitled letters covering pharmaceutical promotional communications and related materials."
+            cta="Enter Untitled Letters"
+            onClick={() => enter("untitled")}
+            loading={loading === "untitled"}
+          />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function ChoiceCard({
+  icon,
+  title,
+  description,
+  cta,
+  onClick,
+  loading,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  cta: string;
+  onClick: () => void;
+  loading: boolean;
+}) {
+  return (
+    <Card className="p-6 flex flex-col gap-4">
+      <div className="h-12 w-12 rounded-md bg-accent flex items-center justify-center">{icon}</div>
+      <div>
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{description}</p>
+      </div>
+      <Button className="mt-auto self-start" onClick={onClick} disabled={loading}>
+        {loading ? "Loading…" : cta}
+        <ArrowRight className="ml-2 h-4 w-4" />
+      </Button>
+    </Card>
   );
 }

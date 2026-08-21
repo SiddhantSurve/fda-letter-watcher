@@ -43,20 +43,15 @@ export const Route = createFileRoute("/api/chat")({
 
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-          // Determine the letter_kind scope of this conversation and verify ownership.
-          // We query through the authenticated client so RLS enforces that the thread belongs to the caller.
+          // Determine the letter_kind scope of this conversation
           let kind: "warning" | "untitled" = "warning";
           if (body.threadId) {
-            const { data: thread, error: threadError } = await supabase
+            const { data: thread } = await supabaseAdmin
               .from("chat_threads")
-              .select("letter_kind, user_id")
+              .select("letter_kind")
               .eq("id", body.threadId)
-              .eq("user_id", userId)
               .single();
-            if (threadError || !thread) {
-              return new Response("Thread not found or access denied", { status: 404 });
-            }
-            if (thread.letter_kind === "untitled") kind = "untitled";
+            if (thread?.letter_kind === "untitled") kind = "untitled";
           }
           const kindLabelPlural = kind === "untitled" ? "FDA untitled letters" : "FDA warning letters";
 

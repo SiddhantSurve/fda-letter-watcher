@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/proxy-client";
+import { supabase } from "@/integrations/supabase/client";
 import {
   listLetters,
   getStats,
@@ -43,7 +43,6 @@ import {
   LogOut,
   MessageSquare,
   MessageCircle,
-  Repeat2,
 } from "lucide-react";
 import { LetterChatDialog } from "@/components/letter-chat-dialog";
 import { summarizeLetter } from "@/lib/letter-summary.functions";
@@ -57,10 +56,6 @@ export const Route = createFileRoute("/_authenticated/chat/$threadId")({
     meta: [
       { title: "FDA Letter Tracker" },
       { name: "description", content: "Chat with FDA warning and untitled letters." },
-      { property: "og:title", content: "FDA Letter Tracker" },
-      { property: "og:description", content: "Chat with FDA warning and untitled letters." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Dashboard,
@@ -93,7 +88,6 @@ function Dashboard() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [sort, setSort] = useState<"posted_desc" | "posted_asc" | "company_asc" | "company_desc">("posted_desc");
-  const [switchingArchive, setSwitchingArchive] = useState(false);
 
   const lettersQ = useQuery({
     queryKey: ["letters", kind, q, page, from, to, sort],
@@ -105,9 +99,9 @@ function Dashboard() {
     queryFn: () => stats({ data: { kind } }),
     enabled: !!threadQ.data,
   });
-  const threadsQ = useQuery<Array<{ id: string; title: string | null }>>({
+  const threadsQ = useQuery({
     queryKey: ["threads", kind],
-    queryFn: () => listThreadsFn({ data: { kind } }) as never,
+    queryFn: () => listThreadsFn({ data: { kind } }),
     enabled: !!threadQ.data,
   });
   const initialMsgsQ = useQuery({
@@ -136,20 +130,6 @@ function Dashboard() {
     navigate({ to: "/chat/$threadId", params: { threadId: id } });
   };
 
-  const switchArchive = async () => {
-    const targetKind = isUntitled ? "warning" : "untitled";
-    setSwitchingArchive(true);
-    try {
-      const threads = await listThreadsFn({ data: { kind: targetKind } });
-      const targetId = threads[0]?.id ?? (await createThreadFn({ data: { kind: targetKind } })).id;
-      await navigate({ to: "/chat/$threadId", params: { threadId: targetId } });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to switch archives.");
-    } finally {
-      setSwitchingArchive(false);
-    }
-  };
-
   const removeThread = async (id: string) => {
     await deleteThreadFn({ data: { id } });
     const remaining = (threadsQ.data ?? []).filter((t) => t.id !== id);
@@ -161,19 +141,19 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Toaster />
-      <div className="border-b bg-card text-center text-xs px-4 py-2 font-medium text-primary">
+      <div className="bg-primary text-primary-foreground text-center text-xs px-4 py-2 font-medium">
         This is a vibe-coding product built by Sid — not formalized and currently in testing.
       </div>
-      <header className="sticky top-0 z-30 border-b bg-background">
+      <header className="border-b border-t-4 border-t-primary">
         <div className="mx-auto max-w-7xl px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">FDA {kindLabel} Tracker</h1>
+            <h1 className="text-2xl font-bold tracking-tight">FDA {kindLabel} Tracker</h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
               </span>
               <p className="text-xs text-muted-foreground">
                 Actively reading through {statsQ.data?.total.toLocaleString() ?? "—"} {isUntitled ? "untitled" : "warning"} letters...
@@ -181,21 +161,9 @@ function Dashboard() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={switchArchive}
-              disabled={switchingArchive}
-              title={`Switch to ${isUntitled ? "Warning Letters" : "Untitled Letters"}`}
-            >
-              {switchingArchive ? (
-                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Repeat2 className="mr-2 h-3.5 w-3.5" />
-              )}
-              {isUntitled ? "Switch to Warning Letters" : "Switch to Untitled Letters"}
+            <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/" })}>
+              Switch archive
             </Button>
-
             <Button variant="outline" size="sm" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
               <RefreshCw className={`mr-2 h-3.5 w-3.5 ${refreshMut.isPending ? "animate-spin" : ""}`} />
               Refresh catalog
@@ -209,26 +177,25 @@ function Dashboard() {
 
       <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
         {/* Explanatory Header */}
-        <div className="rounded-md border bg-card p-5">
+        <div className="bg-card border rounded-lg p-5">
           <h2 className="text-sm font-semibold mb-1">About this tracker</h2>
           <p className="text-xs text-muted-foreground leading-relaxed">
             This workspace monitors FDA {isUntitled ? "untitled" : "warning"} letters in real-time. Use the chat interface to query trends, common violations, and specific compliance themes across the entire database, or use the <strong>"Ask me"</strong> feature next to individual letters to chat directly with that specific document.
           </p>
         </div>
 
-
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
           {/* Thread sidebar */}
-          <aside className="space-y-2 lg:sticky lg:top-28 lg:self-start">
+          <aside className="space-y-2">
             <Button onClick={newThread} className="w-full" size="sm">
             <Plus className="mr-2 h-4 w-4" /> New chat
           </Button>
-          <div className="space-y-1 rounded-md border bg-card p-2">
+          <div className="space-y-1">
             {(threadsQ.data ?? []).map((t) => (
               <div
                 key={t.id}
-                className={`group flex items-center gap-1 rounded-2xl px-2.5 py-2 text-sm cursor-pointer transition-colors ${
-                  t.id === threadId ? "bg-accent" : "hover:bg-muted"
+                className={`group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm cursor-pointer ${
+                  t.id === threadId ? "bg-accent" : "hover:bg-accent/50"
                 }`}
                 onClick={() => navigate({ to: "/chat/$threadId", params: { threadId: t.id } })}
               >
@@ -389,7 +356,7 @@ function LetterCard({ letter: l }: { letter: Letter }) {
                   </p>
                 )}
                 {summaryMut.data && (
-                  <div className="mt-3 rounded-md border bg-muted p-3 text-sm prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1">
+                  <div className="mt-3 rounded-md border border-primary/20 bg-accent/40 p-3 text-sm prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1">
                     <ReactMarkdown>{summaryMut.data.summary}</ReactMarkdown>
                   </div>
                 )}
@@ -578,7 +545,7 @@ function ChatPanel({
               <div
                 className={
                   m.role === "user"
-                    ? "max-w-[80%] rounded-2xl bg-primary text-primary-foreground px-3 py-2 text-sm whitespace-pre-wrap"
+                    ? "max-w-[80%] rounded-lg bg-primary text-primary-foreground px-3 py-2 text-sm whitespace-pre-wrap"
                     : "max-w-full text-sm leading-relaxed whitespace-pre-wrap"
                 }
               >

@@ -18,7 +18,6 @@ import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe
 import { Route as AuthenticatedChatThreadIdRouteImport } from './routes/_authenticated/chat/$threadId'
 import { Route as ApiLetterFileIdRouteImport } from './routes/api/letter-file.$id'
 import { Route as ApiLetterPdfIdRouteImport } from './routes/api/letter-pdf.$id'
-import { Route as ApiSbSplatRouteImport } from './routes/api/sb/$'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiPublicHooksProcessPendingRouteImport } from './routes/api/public/hooks/process-pending'
 import { Route as ApiPublicHooksScrapeFdaRouteImport } from './routes/api/public/hooks/scrape-fda'
@@ -71,11 +70,6 @@ const ApiLetterFileIdRoute = ApiLetterFileIdRouteImport.update({
 const ApiLetterPdfIdRoute = ApiLetterPdfIdRouteImport.update({
   id: '/api/letter-pdf/$id',
   path: '/api/letter-pdf/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSbSplatRoute = ApiSbSplatRouteImport.update({
-  id: '/api/sb/$',
-  path: '/api/sb/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
@@ -132,7 +126,6 @@ export interface FileRoutesByFullPath {
   '/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
   '/api/letter-file/$id': typeof ApiLetterFileIdRoute
   '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
-  '/api/sb/$': typeof ApiSbSplatRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
@@ -151,7 +144,6 @@ export interface FileRoutesByTo {
   '/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
   '/api/letter-file/$id': typeof ApiLetterFileIdRoute
   '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
-  '/api/sb/$': typeof ApiSbSplatRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
@@ -172,7 +164,6 @@ export interface FileRoutesById {
   '/_authenticated/chat/$threadId': typeof AuthenticatedChatThreadIdRoute
   '/api/letter-file/$id': typeof ApiLetterFileIdRoute
   '/api/letter-pdf/$id': typeof ApiLetterPdfIdRoute
-  '/api/sb/$': typeof ApiSbSplatRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/process-pending': typeof ApiPublicHooksProcessPendingRoute
   '/api/public/hooks/scrape-fda': typeof ApiPublicHooksScrapeFdaRoute
@@ -193,7 +184,6 @@ export interface FileRouteTypes {
     | '/chat/$threadId'
     | '/api/letter-file/$id'
     | '/api/letter-pdf/$id'
-    | '/api/sb/$'
     | '/lovable/email/suppression'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
@@ -212,7 +202,6 @@ export interface FileRouteTypes {
     | '/chat/$threadId'
     | '/api/letter-file/$id'
     | '/api/letter-pdf/$id'
-    | '/api/sb/$'
     | '/lovable/email/suppression'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
@@ -232,7 +221,6 @@ export interface FileRouteTypes {
     | '/_authenticated/chat/$threadId'
     | '/api/letter-file/$id'
     | '/api/letter-pdf/$id'
-    | '/api/sb/$'
     | '/lovable/email/suppression'
     | '/api/public/hooks/process-pending'
     | '/api/public/hooks/scrape-fda'
@@ -251,7 +239,6 @@ export interface RootRouteChildren {
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   ApiLetterFileIdRoute: typeof ApiLetterFileIdRoute
   ApiLetterPdfIdRoute: typeof ApiLetterPdfIdRoute
-  ApiSbSplatRoute: typeof ApiSbSplatRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksProcessPendingRoute: typeof ApiPublicHooksProcessPendingRoute
   ApiPublicHooksScrapeFdaRoute: typeof ApiPublicHooksScrapeFdaRoute
@@ -325,13 +312,6 @@ declare module '@tanstack/react-router' {
       path: '/api/letter-pdf/$id'
       fullPath: '/api/letter-pdf/$id'
       preLoaderRoute: typeof ApiLetterPdfIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/sb/$': {
-      id: '/api/sb/$'
-      path: '/api/sb/$'
-      fullPath: '/api/sb/$'
-      preLoaderRoute: typeof ApiSbSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/suppression': {
@@ -414,7 +394,6 @@ const rootRouteChildren: RootRouteChildren = {
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   ApiLetterFileIdRoute: ApiLetterFileIdRoute,
   ApiLetterPdfIdRoute: ApiLetterPdfIdRoute,
-  ApiSbSplatRoute: ApiSbSplatRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksProcessPendingRoute: ApiPublicHooksProcessPendingRoute,
   ApiPublicHooksScrapeFdaRoute: ApiPublicHooksScrapeFdaRoute,
@@ -427,13 +406,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
