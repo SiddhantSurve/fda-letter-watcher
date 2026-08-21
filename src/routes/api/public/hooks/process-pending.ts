@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { fetchBinary, slugifyFromUrl } from "@/lib/fda-scraper.server";
 import { summarizeLetter } from "@/lib/summarize.server";
+import { assertCronAuthorized } from "@/lib/cron-auth.server";
 
 export const Route = createFileRoute("/api/public/hooks/process-pending")({
   server: {
@@ -12,6 +13,8 @@ export const Route = createFileRoute("/api/public/hooks/process-pending")({
 });
 
 async function handler({ request }: { request: Request }) {
+  const denied = await assertCronAuthorized(request);
+  if (denied) return denied;
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const url = new URL(request.url);
