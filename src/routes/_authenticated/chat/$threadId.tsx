@@ -59,7 +59,32 @@ export const Route = createFileRoute("/_authenticated/chat/$threadId")({
     ],
   }),
   component: Dashboard,
+  errorComponent: ArchiveError,
 });
+
+function ArchiveError({ error, reset }: { error: Error; reset: () => void }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="max-w-lg w-full rounded-lg border p-6">
+        <h1 className="text-lg font-semibold">The archive couldn't load</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This is usually a network policy on a corporate laptop blocking the app's data connection.
+          Share the details below with your IT team, or try the site on another network.
+        </p>
+        <pre className="mt-4 max-h-48 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap">
+          {error?.message || String(error)}
+        </pre>
+        <button
+          onClick={reset}
+          className="mt-4 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          Try again
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 function Dashboard() {
   const { threadId } = useParams({ from: "/_authenticated/chat/$threadId" });
