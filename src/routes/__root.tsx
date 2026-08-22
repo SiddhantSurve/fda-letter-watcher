@@ -34,12 +34,55 @@ function NotFoundComponent() {
   );
 }
 
+function isStaleBuildError(error: Error) {
+  const msg = error?.message || String(error);
+  return (
+    /dynamically imported module/i.test(msg) ||
+    /Importing a module script failed/i.test(msg) ||
+    /Failed to fetch module script/i.test(msg) ||
+    /Loading chunk .* failed/i.test(msg) ||
+    /reading '?component'?/i.test(msg) ||
+    /undefined is not an object \(evaluating '.*\.component'\)/i.test(msg)
+  );
+}
+
+async function clearBrowserCaches() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((cacheKey) => caches.delete(cacheKey)));
+    }
+  } catch {
+    // Cache access can be restricted; continue with the recovery navigation.
+  }
+}
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+  const stale = isStaleBuildError(error);
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
+
+  useEffect(() => {
+    if (!stale || typeof window === "undefined") return;
+    const key = "fdainsights:root-stale-recovery";
+    const lastAttempt = Number(sessionStorage.getItem(key) || 0);
+    if (Date.now() - lastAttempt < 5 * 60_000) return;
+    sessionStorage.setItem(key, Date.now().toString());
+    const timer = window.setTimeout(() => {
+      void clearBrowserCaches().then(() => {
+        window.location.replace(`/auth?refresh=${Date.now()}`);
+      });
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [stale]);
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
