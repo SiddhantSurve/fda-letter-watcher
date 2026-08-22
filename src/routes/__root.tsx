@@ -120,6 +120,38 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    const handlePreloadError = (event: Event) => {
+      event.preventDefault();
+      const key = "fdainsights:preload-recovery";
+      const lastAttempt = Number(sessionStorage.getItem(key) || 0);
+      if (Date.now() - lastAttempt < 5 * 60_000) return;
+
+      sessionStorage.setItem(key, Date.now().toString());
+      const recover = async () => {
+        try {
+          if ("serviceWorker" in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((registration) => registration.unregister()));
+          }
+          if ("caches" in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((cacheKey) => caches.delete(cacheKey)));
+          }
+        } catch {
+          // Continue to a clean entry page even if browser cache access is restricted.
+        }
+
+        window.location.replace(`/auth?refresh=${Date.now()}`);
+      };
+
+      void recover();
+    };
+
+    window.addEventListener("vite:preloadError", handlePreloadError);
+    return () => window.removeEventListener("vite:preloadError", handlePreloadError);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
