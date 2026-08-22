@@ -19,7 +19,13 @@ export default defineConfig({
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+    // Ship route components in the main bundle. Lazy route chunks were being
+    // blocked/stale behind strict corporate proxies, which surfaced as
+    // "Failed to fetch dynamically imported module" and then a router crash
+    // ("reading 'component'") when the route module never resolved.
+    router: { autoCodeSplitting: false },
   },
+
   vite: {
     resolve: {
       alias: {
