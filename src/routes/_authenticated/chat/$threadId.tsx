@@ -69,9 +69,14 @@ function isStaleChunkError(error: Error) {
     /Failed to fetch module script/i.test(msg) ||
     /fetch dynamically imported module/i.test(msg) ||
     /error loading dynamically imported module/i.test(msg) ||
-    /Importing a module script failed/i.test(msg)
+    /Importing a module script failed/i.test(msg) ||
+    /Loading chunk .* failed/i.test(msg) ||
+    // A half-loaded old build leaves the router with an undefined route match.
+    /reading '?component'?/i.test(msg) ||
+    /undefined is not an object \(evaluating '.*\.component'\)/i.test(msg)
   );
 }
+
 
 const STALE_BUILD_RECOVERY_KEY = "fdainsights:stale-build-recovery";
 
