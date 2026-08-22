@@ -62,14 +62,49 @@ export const Route = createFileRoute("/_authenticated/chat/$threadId")({
   errorComponent: ArchiveError,
 });
 
+function isStaleChunkError(error: Error) {
+  const msg = error?.message || String(error);
+  return (
+    /Failed to fetch dynamically imported module/i.test(msg) ||
+    /error loading dynamically imported module/i.test(msg) ||
+    /Importing a module script failed/i.test(msg)
+  );
+}
+
 function ArchiveError({ error, reset }: { error: Error; reset: () => void }) {
+  const stale = isStaleChunkError(error);
+
+  useEffect(() => {
+    if (!stale || typeof window === "undefined") return;
+    const KEY = "fdainsights:chunk-reload";
+    const last = Number(sessionStorage.getItem(KEY) || 0);
+    // Only auto-recover once per minute to avoid reload loops.
+    if (Date.now() - last < 60_000) return;
+    sessionStorage.setItem(KEY, String(Date.now()));
+    // Drop stale caches, then hard-reload to pick up the current build.
+    (async () => {
+      try {
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+      } catch {
+        /* ignore */
+      }
+      window.location.reload();
+    })();
+  }, [stale]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-lg w-full rounded-lg border p-6">
-        <h1 className="text-lg font-semibold">The archive couldn't load</h1>
+        <h1 className="text-lg font-semibold">
+          {stale ? "Updating to the latest version…" : "The archive couldn't load"}
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          This is usually a network policy on a corporate laptop blocking the app's data connection.
-          Share the details below with your IT team, or try the site on another network.
+          {stale
+            ? "Your browser was holding an outdated copy of the site. We're refreshing automatically — if this screen stays, do a hard refresh (Ctrl+Shift+R, or Cmd+Shift+R on Mac)."
+            : "This is usually a network policy on a corporate laptop blocking the app's data connection. Share the details below with your IT team, or try the site on another network."}
         </p>
         <pre className="mt-4 max-h-48 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap">
           {error?.message || String(error)}
