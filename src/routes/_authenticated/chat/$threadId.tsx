@@ -73,7 +73,9 @@ function isStaleChunkError(error: Error) {
   );
 }
 
-async function reloadCurrentBuild() {
+const STALE_BUILD_RECOVERY_KEY = "fdainsights:stale-build-recovery";
+
+async function reloadCurrentBuild(destination = window.location.pathname) {
   if (typeof window === "undefined") return;
 
   try {
@@ -89,16 +91,24 @@ async function reloadCurrentBuild() {
     // A cache cleanup failure should never prevent the recovery navigation.
   }
 
-  const url = new URL(window.location.href);
+  const url = new URL(destination, window.location.origin);
   url.searchParams.set("refresh", Date.now().toString());
   window.location.replace(url.toString());
 }
 
 function ArchiveError({ error, reset }: { error: Error; reset: () => void }) {
   const stale = isStaleChunkError(error);
+  const [recoveryAttempted, setRecoveryAttempted] = useState(false);
 
   useEffect(() => {
     if (!stale || typeof window === "undefined") return;
+    const lastAttempt = Number(sessionStorage.getItem(STALE_BUILD_RECOVERY_KEY) || 0);
+    if (Date.now() - lastAttempt < 5 * 60_000) {
+      setRecoveryAttempted(true);
+      return;
+    }
+
+    sessionStorage.setItem(STALE_BUILD_RECOVERY_KEY, Date.now().toString());
     const timer = window.setTimeout(() => void reloadCurrentBuild(), 800);
     return () => window.clearTimeout(timer);
   }, [stale]);
@@ -107,11 +117,17 @@ function ArchiveError({ error, reset }: { error: Error; reset: () => void }) {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-lg w-full rounded-lg border p-6">
         <h1 className="text-lg font-semibold">
-          {stale ? "Updating to the latest version…" : "The archive couldn't load"}
+          {stale && !recoveryAttempted
+            ? "Updating to the latest version…"
+            : stale
+              ? "A fresh start is needed"
+              : "The archive couldn't load"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {stale
-            ? "Your browser was holding an outdated copy of the site. We're clearing it and opening the current version automatically."
+            ? recoveryAttempted
+              ? "The old archive page is still cached. Open the current version from the app's sign-in page."
+              : "Your browser was holding an outdated copy of the site. We're clearing it and opening the current version automatically."
             : "This is usually a network policy on a corporate laptop blocking the app's data connection. Share the details below with your IT team, or try the site on another network."}
         </p>
         <pre className="mt-4 max-h-48 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap">
@@ -119,12 +135,15 @@ function ArchiveError({ error, reset }: { error: Error; reset: () => void }) {
         </pre>
         <button
           onClick={() => {
-            if (stale) void reloadCurrentBuild();
+            if (stale) {
+              sessionStorage.removeItem(STALE_BUILD_RECOVERY_KEY);
+              void reloadCurrentBuild("/auth");
+            }
             else reset();
           }}
           className="mt-4 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
-          {stale ? "Open latest version" : "Try again"}
+          {stale ? "Open current version" : "Try again"}
         </button>
       </div>
     </div>
@@ -159,6 +178,10 @@ function Dashboard() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [sort, setSort] = useState<"posted_desc" | "posted_asc" | "company_asc" | "company_desc">("posted_desc");
+
+  useEffect(() => {
+    sessionStorage.removeItem(STALE_BUILD_RECOVERY_KEY);
+  }, []);
 
   const lettersQ = useQuery({
     queryKey: ["letters", kind, q, page, from, to, sort],
