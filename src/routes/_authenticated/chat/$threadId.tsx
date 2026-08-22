@@ -66,9 +66,32 @@ function isStaleChunkError(error: Error) {
   const msg = error?.message || String(error);
   return (
     /Failed to fetch dynamically imported module/i.test(msg) ||
+    /Failed to fetch module script/i.test(msg) ||
+    /fetch dynamically imported module/i.test(msg) ||
     /error loading dynamically imported module/i.test(msg) ||
     /Importing a module script failed/i.test(msg)
   );
+}
+
+async function reloadCurrentBuild() {
+  if (typeof window === "undefined") return;
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+  } catch {
+    // A cache cleanup failure should never prevent the recovery navigation.
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.set("refresh", Date.now().toString());
+  window.location.replace(url.toString());
 }
 
 function ArchiveError({ error, reset }: { error: Error; reset: () => void }) {
@@ -76,23 +99,8 @@ function ArchiveError({ error, reset }: { error: Error; reset: () => void }) {
 
   useEffect(() => {
     if (!stale || typeof window === "undefined") return;
-    const KEY = "fdainsights:chunk-reload";
-    const last = Number(sessionStorage.getItem(KEY) || 0);
-    // Only auto-recover once per minute to avoid reload loops.
-    if (Date.now() - last < 60_000) return;
-    sessionStorage.setItem(KEY, String(Date.now()));
-    // Drop stale caches, then hard-reload to pick up the current build.
-    (async () => {
-      try {
-        if ("caches" in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map((k) => caches.delete(k)));
-        }
-      } catch {
-        /* ignore */
-      }
-      window.location.reload();
-    })();
+    const timer = window.setTimeout(() => void reloadCurrentBuild(), 800);
+    return () => window.clearTimeout(timer);
   }, [stale]);
 
   return (
@@ -103,17 +111,20 @@ function ArchiveError({ error, reset }: { error: Error; reset: () => void }) {
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {stale
-            ? "Your browser was holding an outdated copy of the site. We're refreshing automatically — if this screen stays, do a hard refresh (Ctrl+Shift+R, or Cmd+Shift+R on Mac)."
+            ? "Your browser was holding an outdated copy of the site. We're clearing it and opening the current version automatically."
             : "This is usually a network policy on a corporate laptop blocking the app's data connection. Share the details below with your IT team, or try the site on another network."}
         </p>
         <pre className="mt-4 max-h-48 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap">
           {error?.message || String(error)}
         </pre>
         <button
-          onClick={reset}
+          onClick={() => {
+            if (stale) void reloadCurrentBuild();
+            else reset();
+          }}
           className="mt-4 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
-          Try again
+          {stale ? "Open latest version" : "Try again"}
         </button>
       </div>
     </div>
